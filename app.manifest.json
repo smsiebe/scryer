@@ -1,0 +1,26 @@
+{
+  "$schema": "https://auragrid.io/schemas/app.manifest.schema.json",
+  "appId": "scryer",
+  "name": "Scryer - Two-Phase Lossless Context Extractor",
+  "version": "0.2.0",
+  "description": "Standalone lossless document and multimodal extraction worker cell powered by AuraRouter.",
+  "services": [
+    {
+      "masId": "scryer-worker",
+      "displayName": "Scryer Batch Extraction Worker",
+      "mode": "LocalOnly",
+      "runtime": "Python",
+      "pythonConfig": {
+        "pythonExecutable": "python",
+        "arguments": "-m scryer doctor"
+      }
+    }
+  ],
+  "distribution": {
+    "channels": ["stable"],
+    "entrypointCommand": "-m scryer doctor",
+    "createDesktopShortcut": false,
+    "createLaunchers": true,
+    "tags": ["scryer", "extraction", "ocr", "multimodal", "aurarouter"]
+  }
+}

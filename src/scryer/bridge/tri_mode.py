@@ -84,6 +84,7 @@ class TriModeBridge(BaseRouterBridge):
         if opts.mcp_url:
             self.ipc.mcp_url = opts.mcp_url
         self.ipc.timeout_seconds = opts.timeout_seconds
+        self.mas.timeout_seconds = opts.timeout_seconds
 
         return self.execute_multimodal(
             task=base_task,
