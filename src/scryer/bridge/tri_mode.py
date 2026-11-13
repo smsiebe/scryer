@@ -72,6 +72,12 @@ class TriModeBridge(BaseRouterBridge):
             opts.prefer_local if opts.prefer_local is not None else hints.get("prefer_local")
         )
 
+        # Propagate runtime options to in-process bridge if unset on custom API
+        if opts.aurarouter_config_path and self.in_process._config_path is None:
+            self.in_process._config_path = opts.aurarouter_config_path
+        self.in_process._enable_privacy = opts.enable_privacy
+        self.in_process._enable_savings = opts.enable_savings
+
         return self.execute_multimodal(
             task=base_task,
             images=phase1.visual_elements,
@@ -80,6 +86,7 @@ class TriModeBridge(BaseRouterBridge):
             context=context,
             execution_mode=opts.execution_mode,
             route_override=opts.route_override,
+            prefer_local=effective_prefer_local,
             tri_mode=opts.tri_mode,
         )
 
@@ -92,6 +99,7 @@ class TriModeBridge(BaseRouterBridge):
         context: Optional[str] = None,
         execution_mode: Optional[str] = None,
         route_override: Optional[str] = None,
+        prefer_local: Optional[bool] = None,
         tri_mode: Optional[TriMode] = None,
     ) -> BridgeResponse:
         target_mode = tri_mode or self.default_mode
@@ -122,6 +130,7 @@ class TriModeBridge(BaseRouterBridge):
             context=context,
             execution_mode=execution_mode,
             route_override=route_override,
+            prefer_local=prefer_local,
         )
 
         # If primary failed and was not in-process, try in-process as fallback
@@ -135,6 +144,7 @@ class TriModeBridge(BaseRouterBridge):
                 context=context,
                 execution_mode=execution_mode,
                 route_override=route_override,
+                prefer_local=prefer_local,
             )
 
         return resp

@@ -19,6 +19,9 @@ class BridgeResponse:
     elapsed_seconds: float = 0.0
     model_id: str = ""
     provider: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    sovereignty_verdict: str = ""
     success: bool = True
     error_message: Optional[str] = None
     annotations: List[str] = field(default_factory=list)
@@ -30,6 +33,9 @@ class BridgeResponse:
             "elapsed_seconds": self.elapsed_seconds,
             "model_id": self.model_id,
             "provider": self.provider,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "sovereignty_verdict": self.sovereignty_verdict,
             "success": self.success,
             "error_message": self.error_message,
         }
@@ -52,5 +58,6 @@ class BaseRouterBridge(ABC, RouterBridgeProtocol):
         context: Optional[str] = None,
         execution_mode: Optional[str] = None,
         route_override: Optional[str] = None,
+        prefer_local: Optional[bool] = None,
     ) -> BridgeResponse:
         pass
