@@ -34,6 +34,7 @@ class XLSXParser(BaseParser):
         filename: str,
         options: Optional[ScryerExtractionOptions] = None,
     ) -> Phase1Output:
+        opts = options or ScryerExtractionOptions()
         try:
             import openpyxl
         except ImportError:
@@ -61,39 +62,50 @@ class XLSXParser(BaseParser):
         sheet_texts = []
         sheet_names = list(wb.sheetnames)
         total_rows = 0
+        truncated_sheets: list[str] = []
+        max_rows = opts.max_xlsx_rows_per_sheet
 
-        for sname in sheet_names:
-            sheet = wb[sname]
-            lines = [f"## Sheet: {sname}"]
-            sheet_rows = 0
-            first_row = True
-            for row in sheet.iter_rows(values_only=True):
-                non_empty = [str(v).strip() if v is not None else "" for v in row]
-                if any(non_empty):
-                    sheet_rows += 1
-                    lines.append("| " + " | ".join(non_empty) + " |")
-                    if first_row:
-                        lines.append("| " + " | ".join("---" for _ in non_empty) + " |")
-                        first_row = False
-            total_rows += sheet_rows
-            if len(lines) > 1:
-                sheet_texts.append("\n".join(lines))
-
-        full_text = "\n\n".join(sheet_texts)
-
-        # Core properties
-        author = None
-        title = None
-        created_ts = None
-        modified_ts = None
         try:
-            props = wb.properties
-            author = props.creator
-            title = props.title
-            created_ts = props.created
-            modified_ts = props.modified
-        except Exception:
-            pass
+            for sname in sheet_names:
+                sheet = wb[sname]
+                lines = [f"## Sheet: {sname}"]
+                sheet_rows = 0
+                first_row = True
+                for row in sheet.iter_rows(values_only=True):
+                    if max_rows > 0 and sheet_rows >= max_rows:
+                        truncated_sheets.append(sname)
+                        break
+                    non_empty = [str(v).strip() if v is not None else "" for v in row]
+                    if any(non_empty):
+                        sheet_rows += 1
+                        lines.append("| " + " | ".join(non_empty) + " |")
+                        if first_row:
+                            lines.append("| " + " | ".join("---" for _ in non_empty) + " |")
+                            first_row = False
+                total_rows += sheet_rows
+                if len(lines) > 1:
+                    sheet_texts.append("\n".join(lines))
+
+            full_text = "\n\n".join(sheet_texts)
+
+            # Core properties
+            author = None
+            title = None
+            created_ts = None
+            modified_ts = None
+            try:
+                props = wb.properties
+                author = props.creator
+                title = props.title
+                created_ts = props.created
+                modified_ts = props.modified
+            except Exception:
+                pass
+        finally:
+            try:
+                wb.close()
+            except Exception:
+                pass
 
         metadata = DocumentMetadata(
             file_size=len(data),
@@ -107,6 +119,7 @@ class XLSXParser(BaseParser):
             custom_fields={
                 "sheet_count": len(sheet_names),
                 "total_rows_extracted": total_rows,
+                "truncated_sheets": truncated_sheets,
             },
         )
 
@@ -115,3 +128,4 @@ class XLSXParser(BaseParser):
             raw_text=full_text,
             page_texts=sheet_texts,
         )
+

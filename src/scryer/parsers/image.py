@@ -12,7 +12,7 @@ from scryer.contracts import (
     Phase1Output,
     ScryerExtractionOptions,
 )
-from scryer.parsers.base import BaseParser, detect_mime
+from scryer.parsers.base import BaseParser, detect_mime, downscale_pil_image
 
 
 class ImageParser(BaseParser):
@@ -88,15 +88,25 @@ class ImageParser(BaseParser):
                 except Exception:
                     pass
 
-                # Optionally strip EXIF if requested
+                # Downscale oversized images before Phase 2 transmission
                 clean_bytes = data
+                orig_dims = (width, height)
+                resized_img, was_resized = downscale_pil_image(img, opts.max_image_pixels)
+                if was_resized:
+                    width, height = resized_img.size
+                    buf = io.BytesIO()
+                    resized_img.save(buf, format=img_format)
+                    clean_bytes = buf.getvalue()
+
+                # Delegate EXIF/metadata stripping to AuraRouter's lossless chunk stripper
+                exif_stripped = False
                 if opts.strip_exif:
                     try:
-                        clean_img = Image.new(img.mode, img.size)
-                        clean_img.putdata(list(img.getdata()))
-                        buf = io.BytesIO()
-                        clean_img.save(buf, format=img_format)
-                        clean_bytes = buf.getvalue()
+                        from aurarouter.media import strip_image_metadata
+
+                        clean_bytes, exif_stripped = strip_image_metadata(
+                            clean_bytes, mime_type=mime_type
+                        )
                     except Exception:
                         pass
 
@@ -122,6 +132,9 @@ class ImageParser(BaseParser):
                         "format": img_format,
                         "mode": img_mode,
                         "exif_tag_count": len(exif_dict),
+                        "exif_stripped": exif_stripped,
+                        "downscaled": was_resized,
+                        "original_dimensions": orig_dims if was_resized else None,
                     },
                 )
 
@@ -139,3 +152,4 @@ class ImageParser(BaseParser):
                 ),
                 raw_text="",
             )
+

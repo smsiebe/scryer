@@ -12,7 +12,7 @@ from scryer.contracts import (
     Phase1Output,
     ScryerExtractionOptions,
 )
-from scryer.parsers.base import BaseParser, detect_mime
+from scryer.parsers.base import BaseParser, detect_mime, downscale_pil_image
 
 
 class PDFParser(BaseParser):
@@ -80,25 +80,27 @@ class PDFParser(BaseParser):
             # Check text density: if low or image-only, render page to image for Phase 2 VLM
             if len(page_text.strip()) < threshold and opts.extract_images:
                 low_text_pages.append(i + 1)
-                try:
-                    pil_img = page.render(scale=2.0).to_pil()
-                    buf = io.BytesIO()
-                    pil_img.save(buf, format="PNG")
-                    b64_data = base64.b64encode(buf.getvalue()).decode("ascii")
-                    visual_elements.append(
-                        ExtractedVisualElement(
-                            element_id=f"{filename}_page_{i+1}",
-                            element_type="rendered_page",
-                            page_number=i + 1,
-                            mime_type="image/png",
-                            width=pil_img.width,
-                            height=pil_img.height,
-                            data_base64=b64_data,
-                            caption=f"Rendered page {i+1} (low text density: {len(page_text.strip())} chars)",
+                if len(visual_elements) < opts.max_render_pages:
+                    try:
+                        pil_img = page.render(scale=opts.render_scale).to_pil()
+                        pil_img, _ = downscale_pil_image(pil_img, opts.max_image_pixels)
+                        buf = io.BytesIO()
+                        pil_img.save(buf, format="PNG")
+                        b64_data = base64.b64encode(buf.getvalue()).decode("ascii")
+                        visual_elements.append(
+                            ExtractedVisualElement(
+                                element_id=f"{filename}_page_{i+1}",
+                                element_type="rendered_page",
+                                page_number=i + 1,
+                                mime_type="image/png",
+                                width=pil_img.width,
+                                height=pil_img.height,
+                                data_base64=b64_data,
+                                caption=f"Rendered page {i+1} (low text density: {len(page_text.strip())} chars)",
+                            )
                         )
-                    )
-                except Exception:
-                    pass
+                    except Exception:
+                        pass
 
         # Extract PDF metadata if available
         meta_dict = {}
@@ -125,6 +127,7 @@ class PDFParser(BaseParser):
                 "creation_date": meta_dict.get("CreationDate"),
                 "mod_date": meta_dict.get("ModDate"),
                 "low_text_pages_count": len(low_text_pages),
+                "rendered_pages_truncated": len(low_text_pages) > opts.max_render_pages,
             },
         )
 
@@ -135,3 +138,4 @@ class PDFParser(BaseParser):
             page_texts=page_texts,
             low_text_pages=low_text_pages,
         )
+

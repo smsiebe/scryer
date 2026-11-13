@@ -131,3 +131,4 @@ class TestLiveExtractionConformance:
         assert result.metadata.author == "architect@auracoredynamics.com"
         assert "Extraction Conformance Verified" in result.raw_text
         assert "Live email parsing executes deterministically." in result.raw_text
+

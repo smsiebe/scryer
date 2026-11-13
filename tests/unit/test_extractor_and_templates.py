@@ -116,3 +116,4 @@ class TestExtractorAndTemplates:
         captured = capsys.readouterr()
         assert "notes.txt" in captured.out
         assert "Meeting Notes" in captured.out
+

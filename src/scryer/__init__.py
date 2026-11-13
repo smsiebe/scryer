@@ -12,9 +12,11 @@ from scryer.contracts import (
     safe_json_dumps,
     safe_json_loads,
 )
-from scryer.extractor import ScryerExtractor
+from scryer.cache import DiskExtractionCache
+from scryer.extractor import AsyncScryerExtractor, ScryerExtractor
 from scryer.protocols import (
     DeterministicParserProtocol,
+    ExtractionCacheProtocol,
     RouterBridgeProtocol,
     ScryerExtractorProtocol,
     TemplateEngineProtocol,
@@ -29,9 +31,12 @@ from scryer.templates import (
     VisualSceneModel,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
+    "AsyncScryerExtractor",
+    "DiskExtractionCache",
+    "ExtractionCacheProtocol",
     "ScryerExtractor",
     "TemplateCompiler",
     "DocumentMetadata",

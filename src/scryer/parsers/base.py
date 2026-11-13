@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import base64
 import hashlib
+import math
 import mimetypes
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -46,6 +47,21 @@ def detect_mime(filename: str, fallback: str = "application/octet-stream") -> st
         ".csv": "text/csv",
     }
     return mapping.get(ext) or mimetypes.guess_type(filename)[0] or fallback
+
+
+def downscale_pil_image(img: Any, max_pixels: Optional[int]) -> Tuple[Any, bool]:
+    """Downscale a PIL Image preserving aspect ratio when pixel count exceeds ``max_pixels``."""
+    if not max_pixels or max_pixels <= 0:
+        return img, False
+    width, height = img.size
+    total = width * height
+    if total <= max_pixels:
+        return img, False
+    scale = math.sqrt(max_pixels / float(total))
+    new_w = max(1, int(width * scale))
+    new_h = max(1, int(height * scale))
+    resized = img.resize((new_w, new_h))
+    return resized, True
 
 
 class BaseParser(ABC, DeterministicParserProtocol):

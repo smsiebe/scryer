@@ -56,3 +56,4 @@ class RouteAssistanceHeuristics:
             "visual_count": len(phase1.visual_elements),
             "low_text_pages": phase1.low_text_pages,
         }
+

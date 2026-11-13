@@ -134,3 +134,4 @@ class TestScryerContracts:
 
         parser = DummyParser()
         assert isinstance(parser, DeterministicParserProtocol)
+

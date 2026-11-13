@@ -6,6 +6,7 @@ extraction options, document metadata, and serialization utilities.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import date, datetime, timezone
 from enum import Enum
@@ -41,6 +42,12 @@ def safe_json_dumps(obj: Any, **kwargs: Any) -> str:
 def safe_json_loads(s: Union[str, bytes], **kwargs: Any) -> Any:
     """Parse JSON strings or bytes safely."""
     return json.loads(s, **kwargs)
+
+
+def compute_canonical_hash(payload: Any) -> str:
+    """Compute a deterministic SHA-256 hex digest for JSON-compatible payloads."""
+    serialized = safe_json_dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 class TriMode(str, Enum):
@@ -119,14 +126,31 @@ class ScryerExtractionOptions(BaseModel):
 
     template: Optional[Any] = None  # ExtractionTemplate, BaseModel subclass, or JSON schema dict
     enable_phase2: bool = True
+    force_phase2: bool = False  # Invoke Phase 2 even for plain-text untemplated docs
     tri_mode: TriMode = TriMode.PYTHON
     route_override: Optional[str] = None
     execution_mode: Optional[str] = None  # "standard", "speculative", "monologue"
+    prefer_local: Optional[bool] = None
+    enable_privacy: bool = True
+    enable_savings: bool = True
     extract_images: bool = True
     min_text_threshold: int = 30  # Render PDF page to image if extracted characters < threshold
+    render_scale: float = 2.0
+    max_render_pages: int = 50
+    max_image_pixels: Optional[int] = 4_000_000
+    max_images_per_call: int = 4
+    max_context_chars: int = 12_000
+    max_xlsx_rows_per_sheet: int = 5_000
     strip_exif: bool = False
     custom_prompt: Optional[str] = None
     max_tokens: int = 2048
+    timeout_seconds: float = 60.0
+    max_retries: int = 1
+    cache_dir: Optional[str] = None
+    aurarouter_config_path: Optional[str] = None
+    ipc_pipe_name: Optional[str] = None
+    mcp_command: Optional[List[str]] = None
+    mcp_url: Optional[str] = None
 
 
 class Phase1Output(BaseModel):
@@ -179,3 +203,4 @@ class ScryerResult(BaseModel):
     def to_json(self, indent: Optional[int] = None) -> str:
         """JSON string representation."""
         return safe_json_dumps(self.to_dict(), indent=indent)
+

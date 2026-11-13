@@ -140,3 +140,4 @@ class DOCXParser(BaseParser):
             visual_elements=visual_elements,
             page_texts=[full_text],
         )
+

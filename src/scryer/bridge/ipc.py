@@ -117,3 +117,4 @@ class IpcRouterBridge(BaseRouterBridge):
             error_message=f"AuraRouter IPC pipe '{self.pipe_name}' is not reachable.",
             elapsed_seconds=time.monotonic() - t0,
         )
+

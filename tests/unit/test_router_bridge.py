@@ -128,3 +128,4 @@ class TestRouterBridgeAndHeuristics:
         assert resp.success is True
         assert resp.raw_output == "Fallback executed successfully"
         mock_in_process.execute_multimodal.assert_called_once()
+

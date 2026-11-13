@@ -99,3 +99,4 @@ class DeterministicParserRegistry:
             return TextParser().parse(data, filename, options)
 
         return parser.parse(data, filename, options)
+

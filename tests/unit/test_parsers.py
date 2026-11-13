@@ -179,3 +179,4 @@ class TestDeterministicParsers:
         out = reg.parse(txt_bytes, "notes.txt")
         assert out.raw_text == "Plain text content here."
         assert out.metadata.mime_type == "text/plain"
+

@@ -148,3 +148,4 @@ class PPTXParser(BaseParser):
             visual_elements=visual_elements,
             page_texts=slide_texts,
         )
+

@@ -4,16 +4,19 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scryer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Two-phase lossless document and image context extraction library powered by AuraRouter"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "Steven Siebert", email = "info@auracoredynamics.com" }
 ]
 dependencies = [
+    "aurarouter>=0.5.8",
     "pydantic>=2.9.0,<3.0.0",
+    "jsonschema>=4.20.0",
+    "mcp>=1.2.0",
     "Pillow>=10.0.0",
     "pypdfium2>=4.30.0",
     "python-docx>=1.1.0",
@@ -24,8 +27,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-router = [
-    "aurarouter>=0.5.8",
+mas = [
+    "auragrid>=4.3.0",
 ]
 dev = [
     "pytest>=8.0.0",
@@ -47,3 +50,4 @@ markers = [
     "conformance: cross-sovereign conformance and live integration tests",
     "adversarial: adversarial stress and error recovery tests",
 ]
+

@@ -61,10 +61,16 @@ class TriModeBridge(BaseRouterBridge):
         if guidelines_str:
             base_task += f"\n\nExtraction Guidelines:\n{guidelines_str}"
 
-        # Context from Phase 1 text if available
+        # Context from Phase 1 text up to configured context budget
         context = None
         if phase1.raw_text.strip():
-            context = f"First-phase deterministic extracted text:\n{phase1.raw_text[:2000]}"
+            limit = max(500, opts.max_context_chars)
+            snippet = phase1.raw_text[:limit]
+            context = f"First-phase deterministic extracted text:\n{snippet}"
+
+        effective_prefer_local = (
+            opts.prefer_local if opts.prefer_local is not None else hints.get("prefer_local")
+        )
 
         return self.execute_multimodal(
             task=base_task,
@@ -132,3 +138,4 @@ class TriModeBridge(BaseRouterBridge):
             )
 
         return resp
+

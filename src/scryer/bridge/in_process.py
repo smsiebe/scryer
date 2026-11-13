@@ -132,3 +132,4 @@ class InProcessRouterBridge(BaseRouterBridge):
                 error_message=str(e),
                 elapsed_seconds=time.monotonic() - t0,
             )
+

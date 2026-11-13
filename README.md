@@ -22,3 +22,4 @@ print("Raw text:", result.raw_text)
 print("Metadata:", result.metadata)
 print("Structured Data:", result.structured_data)
 ```
+

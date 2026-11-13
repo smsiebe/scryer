@@ -61,6 +61,19 @@ class TemplateEngineProtocol(Protocol):
 
 
 @runtime_checkable
+class ExtractionCacheProtocol(Protocol):
+    """Protocol for content-addressed caching of ScryerResult payloads."""
+
+    def get(self, cache_key: str) -> Optional[ScryerResult]:
+        """Retrieve a cached extraction result by composite key, or None on miss."""
+        ...
+
+    def put(self, cache_key: str, result: ScryerResult) -> None:
+        """Persist an extraction result under a composite key."""
+        ...
+
+
+@runtime_checkable
 class ScryerExtractorProtocol(Protocol):
     """Core public extractor interface."""
 
@@ -72,3 +85,4 @@ class ScryerExtractorProtocol(Protocol):
     ) -> ScryerResult:
         """Extract lossless metadata, raw text, structured schema payload, and visual elements."""
         ...
+

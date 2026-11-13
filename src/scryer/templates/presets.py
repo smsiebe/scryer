@@ -81,3 +81,4 @@ SUMMARY_TEMPLATE = ExtractionTemplate(
     ],
     categories=["general", "summarization"],
 )
+
