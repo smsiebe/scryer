@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.20.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scryer"
+version = "0.1.0"
+description = "Two-phase lossless document and image context extraction library powered by AuraRouter"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Steven Siebert", email = "info@auracoredynamics.com" }
+]
+dependencies = [
+    "pydantic>=2.9.0,<3.0.0",
+    "Pillow>=10.0.0",
+    "pypdfium2>=4.30.0",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.0",
+    "python-pptx>=1.0.0",
+    "extract-msg>=0.48.0",
+    "PyYAML>=6.0.0",
+]
+
+[project.optional-dependencies]
+router = [
+    "aurarouter>=0.5.8",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+    "build>=1.2.0",
+]
+
+[project.scripts]
+scryer = "scryer.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scryer"]
+
+[tool.pytest.ini_options]
+strict_markers = true
+testpaths = ["tests"]
+markers = [
+    "conformance: cross-sovereign conformance and live integration tests",
+    "adversarial: adversarial stress and error recovery tests",
+]
