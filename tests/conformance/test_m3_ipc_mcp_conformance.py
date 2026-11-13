@@ -207,3 +207,4 @@ class TestM3IpcAndMcpConformance:
             srv.shutdown()
             srv.server_close()
             thr.join(timeout=2)
+

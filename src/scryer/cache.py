@@ -93,3 +93,4 @@ class DiskExtractionCache(ExtractionCacheProtocol):
                 conn.commit()
         except Exception as e:
             logger.warning("Failed to persist cache entry %s: %s", cache_key, e)
+
