@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import pytest
 from scryer.bridge import BaseRouterBridge, BridgeResponse
 from scryer.contracts import ScryerExtractionOptions
 from scryer.extractor import ScryerExtractor
