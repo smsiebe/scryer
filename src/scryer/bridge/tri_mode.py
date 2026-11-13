@@ -72,11 +72,18 @@ class TriModeBridge(BaseRouterBridge):
             opts.prefer_local if opts.prefer_local is not None else hints.get("prefer_local")
         )
 
-        # Propagate runtime options to in-process bridge if unset on custom API
+        # Propagate runtime options to in-process & IPC bridges
         if opts.aurarouter_config_path and self.in_process._config_path is None:
             self.in_process._config_path = opts.aurarouter_config_path
         self.in_process._enable_privacy = opts.enable_privacy
         self.in_process._enable_savings = opts.enable_savings
+        if opts.ipc_pipe_name:
+            self.ipc.pipe_name = opts.ipc_pipe_name
+        if opts.mcp_command:
+            self.ipc.mcp_command = opts.mcp_command
+        if opts.mcp_url:
+            self.ipc.mcp_url = opts.mcp_url
+        self.ipc.timeout_seconds = opts.timeout_seconds
 
         return self.execute_multimodal(
             task=base_task,

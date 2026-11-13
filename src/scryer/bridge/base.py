@@ -4,8 +4,37 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+from scryer.contracts import safe_json_loads
 from scryer.protocols import RouterBridgeProtocol
+
+
+def parse_structured_json(
+    raw_text: str,
+    response_schema: Optional[Dict[str, Any]],
+) -> Tuple[Optional[Dict[str, Any]], List[str]]:
+    """Parse structured JSON from raw model text, stripping optional markdown fences."""
+    structured = None
+    annotations: List[str] = []
+    if not (response_schema and raw_text):
+        return structured, annotations
+    try:
+        structured = safe_json_loads(raw_text)
+    except Exception:
+        clean = raw_text.strip()
+        if clean.startswith("```"):
+            lines = clean.splitlines()
+            if len(lines) >= 3 and lines[0].startswith("```"):
+                clean = "\n".join(lines[1:-1])
+                try:
+                    structured = safe_json_loads(clean)
+                except Exception:
+                    pass
+        if structured is None:
+            annotations.append(
+                f"Model output did not strictly parse to JSON: {raw_text[:200]}"
+            )
+    return structured, annotations
 
 
 @dataclass

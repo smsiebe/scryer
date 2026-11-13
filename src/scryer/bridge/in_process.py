@@ -8,8 +8,8 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Sequence
 from aurarouter.api import APIConfig, AuraRouterAPI
-from scryer.bridge.base import BaseRouterBridge, BridgeResponse
-from scryer.contracts import ExtractedVisualElement, safe_json_loads
+from scryer.bridge.base import BaseRouterBridge, BridgeResponse, parse_structured_json
+from scryer.contracts import ExtractedVisualElement
 
 logger = logging.getLogger("Scryer.Bridge.InProcess")
 _AURAROUTER_AVAILABLE = True
@@ -116,25 +116,7 @@ class InProcessRouterBridge(BaseRouterBridge):
             task_result = api.execute_task(**exec_kwargs)
 
             raw_text = task_result.output or ""
-            structured = None
-            annotations: List[str] = []
-
-            # Try to parse structured JSON if response_schema was requested
-            if response_schema and raw_text:
-                try:
-                    structured = safe_json_loads(raw_text)
-                except Exception:
-                    clean = raw_text.strip()
-                    if clean.startswith("```"):
-                        lines = clean.splitlines()
-                        if len(lines) >= 3 and lines[0].startswith("```"):
-                            clean = "\n".join(lines[1:-1])
-                            try:
-                                structured = safe_json_loads(clean)
-                            except Exception:
-                                pass
-                    if structured is None:
-                        annotations.append(f"Model output did not strictly parse to JSON: {raw_text[:200]}")
+            structured, annotations = parse_structured_json(raw_text, response_schema)
 
             elapsed = getattr(task_result, "total_elapsed", 0.0) or (time.monotonic() - t0)
             model_id = getattr(task_result, "model_id", "") or last_tried_model
