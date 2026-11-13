@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import base64
 import hashlib
 import mimetypes
@@ -47,13 +48,15 @@ def detect_mime(filename: str, fallback: str = "application/octet-stream") -> st
     return mapping.get(ext) or mimetypes.guess_type(filename)[0] or fallback
 
 
-class BaseParser:
-    """Base class for deterministic document and image parsers."""
+class BaseParser(ABC, DeterministicParserProtocol):
+    """Abstract base class for deterministic document and image parsers."""
 
+    @abstractmethod
     def can_parse(self, filename_or_mime: str) -> bool:
         """Check if parser handles this file type."""
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def parse(
         self,
         data: bytes,
@@ -61,4 +64,4 @@ class BaseParser:
         options: Optional[ScryerExtractionOptions] = None,
     ) -> Phase1Output:
         """Parse raw file bytes deterministically."""
-        raise NotImplementedError
+        pass

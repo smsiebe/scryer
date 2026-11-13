@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 from scryer.protocols import RouterBridgeProtocol
@@ -34,12 +35,14 @@ class BridgeResponse:
         }
 
 
-class BaseRouterBridge(RouterBridgeProtocol):
+class BaseRouterBridge(ABC, RouterBridgeProtocol):
     """Abstract base class for Tri-Mode AuraRouter bridges."""
 
+    @abstractmethod
     def is_available(self) -> bool:
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def execute_multimodal(
         self,
         task: str,
@@ -50,4 +53,4 @@ class BaseRouterBridge(RouterBridgeProtocol):
         execution_mode: Optional[str] = None,
         route_override: Optional[str] = None,
     ) -> BridgeResponse:
-        raise NotImplementedError
+        pass

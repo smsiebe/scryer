@@ -3,13 +3,28 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
-import pytest
-
-from scryer.bridge import BridgeResponse, TriModeBridge
+from scryer.bridge import BaseRouterBridge, BridgeResponse
 from scryer.contracts import ScryerExtractionOptions
 from scryer.extractor import ScryerExtractor
 from scryer.templates import TemplateCompiler
+
+
+class FailingRouterBridge(BaseRouterBridge):
+    """Real failure simulator without in-memory mock transports."""
+
+    def is_available(self) -> bool:
+        return True
+
+    def execute_multimodal(self, *args, **kwargs) -> BridgeResponse:
+        return BridgeResponse(
+            raw_output="",
+            success=False,
+            error_message="Connection refused to LLM endpoint: 503 Service Unavailable",
+            annotations=["AuraRouter was not reachable. Extracted data relies solely on Phase 1."],
+        )
+
+    def execute_with_heuristics(self, *args, **kwargs) -> BridgeResponse:
+        return self.execute_multimodal(*args, **kwargs)
 
 
 @pytest.mark.adversarial
@@ -75,16 +90,9 @@ class TestAdversarialExtraction:
         valid_doc = tmp_path / "doc.txt"
         valid_doc.write_text("Critical report data that must never be lost under any circumstances.", encoding="utf-8")
 
-        # Mock router bridge that raises an unexpected exception
-        mock_bridge = MagicMock(spec=TriModeBridge)
-        mock_bridge.execute_with_heuristics.return_value = BridgeResponse(
-            raw_output="",
-            success=False,
-            error_message="Connection refused to LLM endpoint: 503 Service Unavailable",
-            annotations=["AuraRouter was not reachable. Extracted data relies solely on Phase 1."],
-        )
-
-        extractor = ScryerExtractor(bridge=mock_bridge)
+        # Real router bridge implementation simulating service outage
+        outage_bridge = FailingRouterBridge()
+        extractor = ScryerExtractor(bridge=outage_bridge)
         options = ScryerExtractionOptions(enable_phase2=True, custom_prompt="Extract all entities")
 
         result = extractor.extract(valid_doc, options=options)
