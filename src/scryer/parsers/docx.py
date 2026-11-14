@@ -12,7 +12,7 @@ from scryer.contracts import (
     Phase1Output,
     ScryerExtractionOptions,
 )
-from scryer.parsers.base import BaseParser
+from scryer.parsers.base import BaseParser, prepare_visual_image_bytes
 
 
 class DOCXParser(BaseParser):
@@ -87,15 +87,22 @@ class DOCXParser(BaseParser):
                 if "image" in rel.target_ref:
                     try:
                         img_part = rel.target_part
-                        img_bytes = img_part.blob
-                        img_b64 = base64.b64encode(img_bytes).decode("ascii")
-                        img_mime = img_part.content_type or "image/png"
+                        raw_mime = img_part.content_type or "image/png"
+                        clean_bytes, img_mime, dims, _, _ = prepare_visual_image_bytes(
+                            img_part.blob,
+                            mime_type=raw_mime,
+                            max_image_pixels=opts.max_image_pixels,
+                            strip_exif=opts.strip_exif,
+                        )
+                        img_b64 = base64.b64encode(clean_bytes).decode("ascii")
                         img_idx += 1
                         visual_elements.append(
                             ExtractedVisualElement(
                                 element_id=f"{filename}_img_{img_idx}",
                                 element_type="image",
                                 mime_type=img_mime,
+                                width=dims[0] if dims else None,
+                                height=dims[1] if dims else None,
                                 data_base64=img_b64,
                                 caption=f"Embedded image {img_idx} from {filename}",
                             )

@@ -159,7 +159,28 @@ class TemplateCompiler(TemplateEngineProtocol):
             schema = inline_json_schema_refs(template.to_response_schema())
             return schema, list(template.prompt_guidelines), None
 
-        # 3. Path to file (YAML or JSON)
+        # 3. Named preset or path to file (YAML or JSON)
+        if isinstance(template, str):
+            norm = template.strip().lower().replace("-", "_").replace(" ", "_")
+            from scryer.templates.presets import (
+                INVOICE_TEMPLATE,
+                SCENE_TEMPLATE,
+                SUMMARY_TEMPLATE,
+            )
+
+            preset_map = {
+                "invoice": INVOICE_TEMPLATE,
+                "invoice_extraction": INVOICE_TEMPLATE,
+                "scene": SCENE_TEMPLATE,
+                "scene_analysis": SCENE_TEMPLATE,
+                "visual_scene": SCENE_TEMPLATE,
+                "visual_scene_extraction": SCENE_TEMPLATE,
+                "summary": SUMMARY_TEMPLATE,
+                "document_summary": SUMMARY_TEMPLATE,
+            }
+            if norm in preset_map:
+                return self.resolve_template(preset_map[norm])
+
         if isinstance(template, (str, Path)):
             path_obj = Path(template)
             if path_obj.exists() and path_obj.is_file():
@@ -170,6 +191,7 @@ class TemplateCompiler(TemplateEngineProtocol):
                     parsed = json.loads(raw)
                 schema, guidelines = self._compile_dict_template(parsed)
                 return inline_json_schema_refs(schema), guidelines, None
+            raise FileNotFoundError(f"Template preset or file not found: {template}")
 
         # 4. Dictionary specification
         if isinstance(template, dict):

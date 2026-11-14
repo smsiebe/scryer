@@ -160,7 +160,11 @@ class ScryerExtractor(ScryerExtractorProtocol):
                     bridge_resp.structured_output,
                     annotations,
                 )
-                ext_val = bridge_resp.structured_output.get("extracted_text") or bridge_resp.structured_output.get("text_content")
+                ext_val = (
+                    bridge_resp.structured_output.get("extracted_text")
+                    or bridge_resp.structured_output.get("text_content")
+                    or bridge_resp.structured_output.get("summary")
+                )
                 if isinstance(ext_val, str) and ext_val.strip():
                     extracted_text_for_batch = ext_val.strip()
             elif bridge_resp.raw_output.strip():

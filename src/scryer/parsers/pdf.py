@@ -62,52 +62,58 @@ class PDFParser(BaseParser):
                 raw_text="",
             )
 
-        page_count = len(pdf)
-        page_texts = []
-        low_text_pages = []
-        visual_elements = []
-
-        for i in range(page_count):
-            try:
-                page = pdf[i]
-                textpage = page.get_textpage()
-                page_text = textpage.get_text_range() or ""
-            except Exception:
-                page_text = ""
-
-            page_texts.append(page_text)
-
-            # Check text density: if low or image-only, render page to image for Phase 2 VLM
-            if len(page_text.strip()) < threshold and opts.extract_images:
-                low_text_pages.append(i + 1)
-                if len(visual_elements) < opts.max_render_pages:
-                    try:
-                        pil_img = page.render(scale=opts.render_scale).to_pil()
-                        pil_img, _ = downscale_pil_image(pil_img, opts.max_image_pixels)
-                        buf = io.BytesIO()
-                        pil_img.save(buf, format="PNG")
-                        b64_data = base64.b64encode(buf.getvalue()).decode("ascii")
-                        visual_elements.append(
-                            ExtractedVisualElement(
-                                element_id=f"{filename}_page_{i+1}",
-                                element_type="rendered_page",
-                                page_number=i + 1,
-                                mime_type="image/png",
-                                width=pil_img.width,
-                                height=pil_img.height,
-                                data_base64=b64_data,
-                                caption=f"Rendered page {i+1} (low text density: {len(page_text.strip())} chars)",
-                            )
-                        )
-                    except Exception:
-                        pass
-
-        # Extract PDF metadata if available
-        meta_dict = {}
         try:
-            meta_dict = pdf.get_metadata_dict() or {}
-        except Exception:
-            pass
+            page_count = len(pdf)
+            page_texts = []
+            low_text_pages = []
+            visual_elements = []
+
+            for i in range(page_count):
+                try:
+                    page = pdf[i]
+                    textpage = page.get_textpage()
+                    page_text = textpage.get_text_range() or ""
+                except Exception:
+                    page_text = ""
+
+                page_texts.append(page_text)
+
+                # Check text density: if low or image-only, render page to image for Phase 2 VLM
+                if len(page_text.strip()) < threshold and opts.extract_images:
+                    low_text_pages.append(i + 1)
+                    if len(visual_elements) < opts.max_render_pages:
+                        try:
+                            pil_img = page.render(scale=opts.render_scale).to_pil()
+                            pil_img, _ = downscale_pil_image(pil_img, opts.max_image_pixels)
+                            buf = io.BytesIO()
+                            pil_img.save(buf, format="PNG")
+                            b64_data = base64.b64encode(buf.getvalue()).decode("ascii")
+                            visual_elements.append(
+                                ExtractedVisualElement(
+                                    element_id=f"{filename}_page_{i+1}",
+                                    element_type="rendered_page",
+                                    page_number=i + 1,
+                                    mime_type="image/png",
+                                    width=pil_img.width,
+                                    height=pil_img.height,
+                                    data_base64=b64_data,
+                                    caption=f"Rendered page {i+1} (low text density: {len(page_text.strip())} chars)",
+                                )
+                            )
+                        except Exception:
+                            pass
+
+            # Extract PDF metadata if available
+            meta_dict = {}
+            try:
+                meta_dict = pdf.get_metadata_dict() or {}
+            except Exception:
+                pass
+        finally:
+            try:
+                pdf.close()
+            except Exception:
+                pass
 
         full_text = "\n\n".join(
             f"--- Page {idx+1} ---\n{t}" if t.strip() else f"--- Page {idx+1} (Visual/Scanned) ---"

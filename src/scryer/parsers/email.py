@@ -15,7 +15,7 @@ from scryer.contracts import (
     Phase1Output,
     ScryerExtractionOptions,
 )
-from scryer.parsers.base import BaseParser
+from scryer.parsers.base import BaseParser, detect_mime, prepare_visual_image_bytes
 
 
 def _strip_html_tags(html: str) -> str:
@@ -76,12 +76,20 @@ class EmailParser(BaseParser):
                 att_bytes = part.get_payload(decode=True) or b""
                 att_counter += 1
                 if content_type.startswith("image/") and opts.extract_images:
+                    clean_bytes, img_mime, dims, _, _ = prepare_visual_image_bytes(
+                        att_bytes,
+                        mime_type=content_type,
+                        max_image_pixels=opts.max_image_pixels,
+                        strip_exif=opts.strip_exif,
+                    )
                     visual_elements.append(
                         ExtractedVisualElement(
                             element_id=f"{filename}_{att_filename}",
                             element_type="image",
-                            mime_type=content_type,
-                            data_base64=base64.b64encode(att_bytes).decode("ascii"),
+                            mime_type=img_mime,
+                            width=dims[0] if dims else None,
+                            height=dims[1] if dims else None,
+                            data_base64=base64.b64encode(clean_bytes).decode("ascii"),
                             caption=f"Email attachment {att_filename}",
                         )
                     )
@@ -145,6 +153,7 @@ class EmailParser(BaseParser):
                 raw_text="",
             )
 
+        msg = None
         try:
             msg = extract_msg.Message(io.BytesIO(data))
             subject = msg.subject or ""
@@ -162,14 +171,25 @@ class EmailParser(BaseParser):
                     att_count += 1
                     att_name = getattr(att, "longFilename", None) or getattr(att, "shortFilename", f"att_{att_count}")
                     att_data = getattr(att, "data", b"")
-                    # Check if attachment is an image
-                    if isinstance(att_data, bytes) and att_data.startswith((b"\x89PNG", b"\xff\xd8", b"GIF8")):
+                    inferred_mime = detect_mime(str(att_name), fallback="")
+                    is_img_magic = isinstance(att_data, bytes) and att_data.startswith(
+                        (b"\x89PNG", b"\xff\xd8", b"GIF8", b"RIFF", b"BM")
+                    )
+                    if isinstance(att_data, bytes) and (is_img_magic or inferred_mime.startswith("image/")):
+                        clean_bytes, img_mime, dims, _, _ = prepare_visual_image_bytes(
+                            att_data,
+                            mime_type=inferred_mime or "image/png",
+                            max_image_pixels=opts.max_image_pixels,
+                            strip_exif=opts.strip_exif,
+                        )
                         visual_elements.append(
                             ExtractedVisualElement(
                                 element_id=f"{filename}_{att_name}",
                                 element_type="image",
-                                mime_type="image/png",
-                                data_base64=base64.b64encode(att_data).decode("ascii"),
+                                mime_type=img_mime,
+                                width=dims[0] if dims else None,
+                                height=dims[1] if dims else None,
+                                data_base64=base64.b64encode(clean_bytes).decode("ascii"),
                                 caption=f"MSG attachment {att_name}",
                             )
                         )
@@ -210,4 +230,10 @@ class EmailParser(BaseParser):
                 ),
                 raw_text="",
             )
+        finally:
+            if msg is not None and hasattr(msg, "close"):
+                try:
+                    msg.close()
+                except Exception:
+                    pass
 

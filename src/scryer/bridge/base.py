@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from scryer.contracts import safe_json_loads
 from scryer.protocols import RouterBridgeProtocol
@@ -13,21 +14,38 @@ def parse_structured_json(
     raw_text: str,
     response_schema: Optional[Dict[str, Any]],
 ) -> Tuple[Optional[Dict[str, Any]], List[str]]:
-    """Parse structured JSON from raw model text, stripping optional markdown fences."""
+    """Parse structured JSON from raw model text, stripping optional fences and routing context."""
     structured = None
     annotations: List[str] = []
     if not (response_schema and raw_text):
         return structured, annotations
+
+    clean = re.sub(
+        r"\s*<!--\s*_aura_routing_context:.*?-->\s*",
+        "",
+        raw_text,
+        flags=re.DOTALL,
+    ).strip()
+
     try:
-        structured = safe_json_loads(raw_text)
+        structured = safe_json_loads(clean)
     except Exception:
-        clean = raw_text.strip()
-        if clean.startswith("```"):
-            lines = clean.splitlines()
-            if len(lines) >= 3 and lines[0].startswith("```"):
-                clean = "\n".join(lines[1:-1])
+        fence_match = re.search(
+            r"```(?:json)?\s*([\s\S]*?)\s*```",
+            clean,
+            flags=re.IGNORECASE,
+        )
+        if fence_match:
+            try:
+                structured = safe_json_loads(fence_match.group(1).strip())
+            except Exception:
+                pass
+        if structured is None:
+            first_brace = clean.find("{")
+            last_brace = clean.rfind("}")
+            if first_brace != -1 and last_brace > first_brace:
                 try:
-                    structured = safe_json_loads(clean)
+                    structured = safe_json_loads(clean[first_brace : last_brace + 1])
                 except Exception:
                     pass
         if structured is None:

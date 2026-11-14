@@ -12,7 +12,11 @@ from scryer.contracts import (
     Phase1Output,
     ScryerExtractionOptions,
 )
-from scryer.parsers.base import BaseParser, detect_mime, downscale_pil_image
+from scryer.parsers.base import (
+    BaseParser,
+    detect_mime,
+    prepare_visual_image_bytes,
+)
 
 
 class ImageParser(BaseParser):
@@ -88,27 +92,19 @@ class ImageParser(BaseParser):
                 except Exception:
                     pass
 
-                # Downscale oversized images before Phase 2 transmission
-                clean_bytes = data
+                # Downscale oversized images, normalize unsafe formats/modes, and strip EXIF if requested
                 orig_dims = (width, height)
-                resized_img, was_resized = downscale_pil_image(img, opts.max_image_pixels)
-                if was_resized:
-                    width, height = resized_img.size
-                    buf = io.BytesIO()
-                    resized_img.save(buf, format=img_format)
-                    clean_bytes = buf.getvalue()
-
-                # Delegate EXIF/metadata stripping to AuraRouter's lossless chunk stripper
-                exif_stripped = False
-                if opts.strip_exif:
-                    try:
-                        from aurarouter.media import strip_image_metadata
-
-                        clean_bytes, exif_stripped = strip_image_metadata(
-                            clean_bytes, mime_type=mime_type
-                        )
-                    except Exception:
-                        pass
+                clean_bytes, resolved_mime, final_dims, was_resized, exif_stripped = (
+                    prepare_visual_image_bytes(
+                        data,
+                        mime_type=mime_type,
+                        max_image_pixels=opts.max_image_pixels,
+                        strip_exif=opts.strip_exif,
+                    )
+                )
+                if final_dims is not None:
+                    width, height = final_dims
+                mime_type = resolved_mime
 
                 b64_data = base64.b64encode(clean_bytes).decode("ascii")
 
