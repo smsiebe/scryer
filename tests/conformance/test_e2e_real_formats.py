@@ -217,3 +217,4 @@ class TestE2ERealFormatsAndPresets:
         assert res.structured_data["topics"] == ["networking", "hardware"]
         assert "Patch Panel 3B" in (res.visual_elements[0].ocr_text or "")
         assert "Switch SW-09" in res.raw_text
+
