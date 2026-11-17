@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import io
 from email.message import EmailMessage
-from pathlib import Path
-import pytest
 from PIL import Image
 
 from scryer.contracts import ScryerExtractionOptions
@@ -16,7 +14,6 @@ from scryer.parsers import (
     ImageParser,
     PDFParser,
     PPTXParser,
-    TextParser,
     XLSXParser,
 )
 

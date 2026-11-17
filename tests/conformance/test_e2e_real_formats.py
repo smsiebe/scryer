@@ -5,8 +5,7 @@ from __future__ import annotations
 import base64
 from email.message import EmailMessage
 import io
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import docx
 from PIL import Image

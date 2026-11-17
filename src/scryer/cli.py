@@ -7,7 +7,7 @@ import argparse
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from scryer.bridge import TriModeBridge
 from scryer.contracts import ScryerExtractionOptions, TriMode, safe_json_dumps

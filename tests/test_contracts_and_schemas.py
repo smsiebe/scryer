@@ -3,26 +3,19 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import json
-import pytest
 
 from scryer.contracts import (
     DocumentMetadata,
     ExtractedVisualElement,
     ExtractionTemplate,
-    IntentMode,
     Phase1Output,
     ScryerExtractionOptions,
     ScryerResult,
     TriMode,
-    safe_json_dumps,
     safe_json_loads,
 )
 from scryer.protocols import (
     DeterministicParserProtocol,
-    RouterBridgeProtocol,
-    ScryerExtractorProtocol,
-    TemplateEngineProtocol,
 )
 
 

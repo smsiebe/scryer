@@ -14,7 +14,6 @@ import pptx
 
 from scryer.contracts import ScryerExtractionOptions, ScryerResult, safe_json_loads
 from scryer.extractor import ScryerExtractor
-from scryer.templates import INVOICE_TEMPLATE, InvoiceModel
 
 
 @pytest.mark.conformance

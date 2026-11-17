@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-import base64
 import hashlib
 import io
 import math
 import mimetypes
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 from scryer.contracts import (
-    DocumentMetadata,
-    ExtractedVisualElement,
     Phase1Output,
     ScryerExtractionOptions,
 )

@@ -265,6 +265,7 @@ class TemplateCompiler(TemplateEngineProtocol):
                 guidelines.append(f"Field '{field_name}' ({field_def})")
 
         schema: Dict[str, Any] = {
+            "title": name,
             "type": "object",
             "properties": properties,
         }

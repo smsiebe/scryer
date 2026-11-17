@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
 from unittest.mock import MagicMock
-from PIL import Image
 from pydantic import BaseModel, Field
 import pytest
 
@@ -15,9 +13,7 @@ from scryer.contracts import ScryerExtractionOptions
 from scryer.extractor import ScryerExtractor
 from scryer.templates import (
     INVOICE_TEMPLATE,
-    InvoiceModel,
     TemplateCompiler,
-    VisualSceneModel,
 )
 
 

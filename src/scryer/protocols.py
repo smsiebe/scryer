@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol, Sequence, Tuple, Union, runtime_checkable
 from scryer.contracts import (
-    ExtractionTemplate,
     Phase1Output,
     ScryerExtractionOptions,
     ScryerResult,

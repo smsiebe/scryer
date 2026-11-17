@@ -22,7 +22,6 @@ from scryer.templates import (
     INVOICE_TEMPLATE,
     InvoiceModel,
     TemplateCompiler,
-    inline_json_schema_refs,
     validate_structured_output,
 )
 

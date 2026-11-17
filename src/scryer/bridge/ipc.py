@@ -5,10 +5,8 @@ from __future__ import annotations
 import asyncio
 import atexit
 from contextlib import AsyncExitStack
-import json
 import logging
 import os
-import sys
 import threading
 import time
 from typing import Any, Dict, List, Optional, Sequence

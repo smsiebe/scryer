@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import inspect
-import json
 import logging
 import time
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence
 from aurarouter.api import APIConfig, AuraRouterAPI
 from scryer.bridge.base import BaseRouterBridge, BridgeResponse, parse_structured_json
 from scryer.contracts import ExtractedVisualElement

@@ -12,7 +12,7 @@ from scryer.contracts import (
     Phase1Output,
     ScryerExtractionOptions,
 )
-from scryer.parsers.base import BaseParser, detect_mime, downscale_pil_image
+from scryer.parsers.base import BaseParser, downscale_pil_image
 
 
 class PDFParser(BaseParser):

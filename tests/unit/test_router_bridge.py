@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock
-import pytest
 
 from scryer.bridge import (
     BridgeResponse,
     InProcessRouterBridge,
-    IpcRouterBridge,
-    MasRouterBridge,
     RouteAssistanceHeuristics,
     TriModeBridge,
 )
@@ -18,7 +15,6 @@ from scryer.contracts import (
     DocumentMetadata,
     ExtractedVisualElement,
     Phase1Output,
-    ScryerExtractionOptions,
     TriMode,
 )
 

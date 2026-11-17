@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import io
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 from scryer.contracts import (
     DocumentMetadata,
     ExtractedVisualElement,
