@@ -162,6 +162,36 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_eval(args: argparse.Namespace) -> int:
+    from scryer.eval import BenchmarkRunner, DatasetType
+    from scryer.eval.cache import BenchmarkCacheManager
+
+    cache_mgr = BenchmarkCacheManager(cache_dir=Path(args.cache_dir) if args.cache_dir else None)
+    extractor = ScryerExtractor()
+    runner = BenchmarkRunner(extractor=extractor, cache_mgr=cache_mgr)
+
+    options = ScryerExtractionOptions(
+        template=args.template,
+        tri_mode=TriMode(args.tri_mode),
+        enable_phase2=not args.no_phase2,
+        prefer_local=args.prefer_local,
+    )
+
+    report = runner.run_benchmark(
+        dataset=DatasetType(args.dataset),
+        limit=args.limit,
+        options=options,
+    )
+
+    out_json = report.model_dump_json(indent=2)
+    if args.out:
+        Path(args.out).write_text(out_json, encoding="utf-8")
+        print(f"Report written to {args.out}")
+    else:
+        print(out_json)
+    return 0
+
+
 def _add_extraction_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--template", choices=["invoice", "scene", "summary"], help="Named preset template")
     p.add_argument("--template-file", help="Path to custom YAML or JSON template file")
@@ -201,6 +231,16 @@ def main(argv: list[str] | None = None) -> int:
     doctor_parser.add_argument("--pipe-name", help="Override IPC pipe/socket path to probe")
     doctor_parser.add_argument("--mcp-url", help="MCP StreamableHTTP/SSE URL to probe")
 
+    eval_parser = subparsers.add_parser("eval", help="Evaluate Scryer accuracy across benchmark datasets (sroie, cord, office_ocb)")
+    eval_parser.add_argument("--dataset", "-d", required=True, choices=["sroie", "cord", "office_ocb"], help="Target benchmark dataset")
+    eval_parser.add_argument("--limit", "-n", type=int, default=10, help="Sample limit (default: 10, 0 for all)")
+    eval_parser.add_argument("--template", help="Extraction template preset or model to use")
+    eval_parser.add_argument("--tri-mode", choices=["python", "ipc", "mas"], default="python", help="AuraRouter execution backend")
+    eval_parser.add_argument("--no-phase2", action="store_true", help="Disable Phase 2 enrichment to benchmark pure Phase 1 deterministic parsers")
+    eval_parser.add_argument("--prefer-local", action="store_true", default=None, help="Forward local model preference to AuraRouter")
+    eval_parser.add_argument("--cache-dir", help="Directory for dataset cache")
+    eval_parser.add_argument("--out", "-o", help="Write evaluation JSON report to path")
+
     args = parser.parse_args(argv)
     if not args.command:
         parser.print_help()
@@ -213,6 +253,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_templates(args)
     if args.command == "doctor":
         return _cmd_doctor(args)
+    if args.command == "eval":
+        return _cmd_eval(args)
     return 0
 
 
