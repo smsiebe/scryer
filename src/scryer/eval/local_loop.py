@@ -139,7 +139,7 @@ class LocalPhiLoopOrchestrator:
         if len(target_phrase) >= 8:
             for line in content.splitlines():
                 line_clean = line.strip('", \t\'')
-                if target_phrase in line_clean or line_clean in target_phrase:
+                if len(line_clean) >= 8 and (target_phrase in line_clean or line_clean in target_phrase):
                     if not replace_block.strip().startswith(('"', "'")):
                         clean_text = replace_block.strip().rstrip(",").strip('"').strip("'")
                         replace_block = f'        "{clean_text}",'
