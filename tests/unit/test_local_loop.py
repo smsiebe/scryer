@@ -17,7 +17,7 @@ def test_orchestrator_initialization(tmp_path: Path):
     )
     assert orch.repo_root == tmp_path
     assert orch.significance_threshold == 0.01
-    assert orch.model_name == "auracore-assist-phi:latest"
+    assert orch.model_name == "qwen2.5-coder:7b"
 
 
 def test_apply_and_revert_patch(tmp_path: Path):

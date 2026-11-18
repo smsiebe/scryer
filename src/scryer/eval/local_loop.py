@@ -28,30 +28,31 @@ from scryer.eval.runner import BenchmarkRunner
 logger = logging.getLogger("Scryer.Eval.LocalLoop")
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
-DEFAULT_PHI_MODEL = "auracore-assist-phi:latest"
+DEFAULT_LOCAL_MODEL = "qwen2.5-coder:7b"
 
 
 SYSTEM_PROMPT = """You are an elite, autonomous ML optimization engineer for the Scryer multimodal extraction engine.
 Your mission is to improve Scryer's extraction accuracy (Field Exact Match and Token F1) against ground truth benchmark receipts and documents.
 
 For each iteration, analyze the provided failing samples, identify the root cause, and propose a minimal, surgical code or prompt edit.
+Whenever possible, PREFER adding deterministic rules, regexes, address canonicalizers, or arithmetic reconciliations to 'src/scryer/normalizers.py'.
+Deterministic code runs with 0 GPU latency, 0 hallucination risk, and 100% testable reproducibility.
 
 You must respond ONLY with a valid JSON object with the following exact keys:
 {
   "analysis": "Precise root cause explanation of why the extraction failed on the given sample(s)",
-  "hypothesis": "Testable hypothesis for how a specific guideline or regex/parsing change fixes it without regressions",
-  "target_file": "src/scryer/templates/presets.py",
+  "hypothesis": "Testable hypothesis for how a specific normalizer rule or guideline fixes it without regressions",
+  "target_file": "src/scryer/normalizers.py",
   "search_block": "Exact verbatim string currently in the file to be replaced",
   "replace_block": "Exact verbatim replacement string",
-  "commit_msg": "Short conventional commit message describing the improvement (e.g. 'fix(presets): disambiguate merchant name from cashier')"
+  "commit_msg": "Short conventional commit message describing the improvement (e.g. 'feat(normalizers): canonicalize postal code 43300')"
 }
 
 Guidelines for proposals:
-1. Target files should typically be 'src/scryer/templates/presets.py' (improving prompt_guidelines or schemas) or 'src/scryer/eval/metrics.py' (refining key aliases or normalization).
+1. Target files should typically be 'src/scryer/normalizers.py' (preferred: for deterministic post-processing, regex cleanups, arithmetic, postcodes) or 'src/scryer/templates/presets.py' (for prompt guidelines or schemas).
 2. The search_block must be an exact verbatim substring in the current target file.
 3. Keep changes minimal and surgical to avoid breaking existing valid extractions.
-4. SYNTAX RULE: If replacing an item inside `prompt_guidelines = [...]`, ensure the replacement is a valid Python string literal with double quotes, e.g.:
-   "Extract vendor_name, merchant name, or store company exactly as printed on the header.",
+4. SYNTAX RULE: Ensure all code proposals are strictly valid Python syntax.
 """
 
 
@@ -77,7 +78,7 @@ class LocalPhiLoopOrchestrator:
         self,
         repo_root: Optional[Path] = None,
         ollama_url: str = DEFAULT_OLLAMA_URL,
-        model_name: str = DEFAULT_PHI_MODEL,
+        model_name: str = DEFAULT_LOCAL_MODEL,
         cache_dir: Optional[str] = None,
         significance_threshold: float = 0.005,
     ):
@@ -183,7 +184,17 @@ class LocalPhiLoopOrchestrator:
 
         # 2. Fast pytest suite
         pytest_res = subprocess.run(
-            [sys.executable, "-s", "-m", "pytest", "-p", "no:napari", "-q", "tests/unit/test_eval_harness.py"],
+            [
+                sys.executable,
+                "-s",
+                "-m",
+                "pytest",
+                "-p",
+                "no:napari",
+                "-q",
+                "tests/unit/test_eval_harness.py",
+                "tests/unit/test_normalizers.py",
+            ],
             cwd=str(self.repo_root),
             capture_output=True,
             text=True,
@@ -267,11 +278,13 @@ class LocalPhiLoopOrchestrator:
                 if v.score < 1.0 or v.details.get("exact_match", 0.0) < 1.0
             }
 
-            # 2. Read context of target editable file
+            # 2. Read context of target editable files
+            norm_path = self.repo_root / "src/scryer/normalizers.py"
             presets_path = self.repo_root / "src/scryer/templates/presets.py"
+            norm_snippet = norm_path.read_text(encoding="utf-8") if norm_path.exists() else ""
             presets_snippet = presets_path.read_text(encoding="utf-8") if presets_path.exists() else ""
 
-            # 3. Formulate optimization prompt for Phi
+            # 3. Formulate optimization prompt for local model
             user_prompt = f"""Current Benchmark Optimization State:
 Dataset: {ds_type.value}
 Iteration: {iteration}
@@ -292,15 +305,22 @@ Extracted Entities:
 Failing Field Breakdown:
 {json.dumps({k: v.details for k, v in failing_fields.items()}, indent=2)}
 
-Current target code in src/scryer/templates/presets.py:
+Available Files to Edit:
+File 1: src/scryer/normalizers.py (PREFERRED: Add deterministic regexes, postal code entries in _POSTCODE_CANONICAL, address cleanup, or math reconciliation in reconcile_receipt_totals):
+```python
+{norm_snippet}
+```
+
+File 2: src/scryer/templates/presets.py (Use if a prompt guideline or schema adjustment is necessary):
 ```python
 {presets_snippet}
 ```
 
 Task:
-Propose a minimal, surgical change to the prompt_guidelines or InvoiceModel schema in src/scryer/templates/presets.py
-to fix the discrepancy on failing field(s) without breaking other samples.
-Output only the requested JSON object.
+1. Explain the discrepancy between ground truth and extracted prediction for the failing field(s).
+2. Propose a minimal, surgical Python change (preferably in src/scryer/normalizers.py) to fix it.
+3. The search_block must be an EXACT substring of the target file.
+4. Output ONLY the JSON object.
 """
 
             # 4. Invoke local Phi
