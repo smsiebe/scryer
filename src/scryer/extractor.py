@@ -19,6 +19,7 @@ from scryer.contracts import (
 from scryer.parsers import DeterministicParserRegistry, compute_sha256, detect_mime
 from scryer.protocols import ExtractionCacheProtocol, ScryerExtractorProtocol
 from scryer.templates import TemplateCompiler, validate_structured_output
+from scryer.normalizers import canonicalize_extracted_entities
 
 logger = logging.getLogger("Scryer.Extractor")
 
@@ -323,7 +324,7 @@ class ScryerExtractor(ScryerExtractorProtocol):
                     schema=response_schema,
                     model_cls=pydantic_cls,
                 )
-                structured_data = validated_data
+                structured_data = canonicalize_extracted_entities(validated_data)
                 unstructured_annotations.extend(val_notes)
 
             # Weave page OCR text back into raw_text when Phase 1 text was empty/scanned

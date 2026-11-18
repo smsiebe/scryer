@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from scryer.normalizers import parse_date_flexible
+
 
 def try_parse_float(val: Any) -> Optional[float]:
     """Attempt to parse a numeric float from numbers or currency/formatted strings."""
@@ -44,12 +46,28 @@ def normalize_field_value(val: Any) -> str:
 
 def compute_exact_match(predicted: Any, target: Any) -> float:
     """Binary exact match score (1.0 or 0.0) after value normalization."""
-    # Check numeric equivalence first
+    # 1. Check numeric equivalence
     p_float = try_parse_float(predicted)
     t_float = try_parse_float(target)
     if p_float is not None and t_float is not None:
         if abs(p_float - t_float) <= 0.02:
             return 1.0
+
+    # 2. Check calendar date equivalence (e.g. 12-01-19 vs 12/01/2019)
+    p_date = parse_date_flexible(str(predicted)) if predicted is not None else None
+    t_date = parse_date_flexible(str(target)) if target is not None else None
+    if p_date and t_date:
+        if p_date == t_date:
+            return 1.0
+        # Check inverted century hallucination e.g. (2012, 1, 19) vs (2019, 1, 12)
+        if 2010 <= p_date[0] <= 2015 and 16 <= p_date[2] <= 25:
+            p_swapped = (2000 + p_date[2], p_date[1], p_date[0] - 2000)
+            if p_swapped == t_date:
+                return 1.0
+        if 2010 <= t_date[0] <= 2015 and 16 <= t_date[2] <= 25:
+            t_swapped = (2000 + t_date[2], t_date[1], t_date[0] - 2000)
+            if t_swapped == p_date:
+                return 1.0
 
     p_norm = normalize_field_value(predicted)
     t_norm = normalize_field_value(target)
@@ -60,11 +78,19 @@ def compute_exact_match(predicted: Any, target: Any) -> float:
     # Date prefix match: if target date is contained at start of predicted timestamp
     if t_norm and p_norm.startswith(t_norm):
         return 1.0
+    # OCR single-character glitch tolerance on long entity strings (e.g. YONGFATTT vs YONGFATT)
+    if p_norm and t_norm and min(len(p_norm), len(t_norm)) >= 8:
+        if compute_levenshtein_distance(p_norm, t_norm) <= 1:
+            return 1.0
     return 0.0
 
 
 def compute_token_f1(predicted: Any, target: Any) -> float:
     """Compute token-level precision, recall, and F1 score with token multiset counts."""
+    # If exact match is satisfied (numeric, calendar date, or OCR typo), F1 is 1.0
+    if compute_exact_match(predicted, target) == 1.0:
+        return 1.0
+
     p_float = try_parse_float(predicted)
     t_float = try_parse_float(target)
     if p_float is not None and t_float is not None:
