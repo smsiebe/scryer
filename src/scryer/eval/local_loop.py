@@ -53,6 +53,21 @@ Guidelines for proposals:
 """
 
 
+def _find_repo_root(start: Optional[Path] = None) -> Path:
+    """Dynamically discover scryer repository root."""
+    cur = (start or Path.cwd()).resolve()
+    if (cur / "src" / "scryer").exists():
+        return cur
+    if (cur / "scryer" / "src" / "scryer").exists():
+        return cur / "scryer"
+    for parent in cur.parents:
+        if (parent / "src" / "scryer").exists():
+            return parent
+        if (parent / "scryer" / "src" / "scryer").exists():
+            return parent / "scryer"
+    return cur
+
+
 class LocalPhiLoopOrchestrator:
     """Orchestrates the autonomous on-prem loop driving local model self-improvement."""
 
@@ -64,7 +79,7 @@ class LocalPhiLoopOrchestrator:
         cache_dir: Optional[str] = None,
         significance_threshold: float = 0.005,
     ):
-        self.repo_root = repo_root or Path.cwd()
+        self.repo_root = _find_repo_root(repo_root)
         self.ollama_url = ollama_url.rstrip("/")
         self.model_name = model_name
         self.cache_dir = cache_dir or r"C:\tmp\scryer_benchmarks"
@@ -104,20 +119,41 @@ class LocalPhiLoopOrchestrator:
             raise ValueError(f"Failed to parse JSON response from local model: {content[:300]}")
 
     def _apply_patch(self, target_file_rel: str, search_block: str, replace_block: str) -> bool:
-        """Apply surgical string replacement to target file."""
+        """Apply surgical string replacement to target file with resilient whitespace normalization."""
         file_path = self.repo_root / target_file_rel
         if not file_path.exists():
             logger.warning("Target file does not exist: %s", file_path)
             return False
 
         content = file_path.read_text(encoding="utf-8")
-        if search_block not in content:
-            logger.warning("Search block not found in %s", file_path)
-            return False
+        # 1. Exact match
+        if search_block in content:
+            new_content = content.replace(search_block, replace_block, 1)
+            file_path.write_text(new_content, encoding="utf-8")
+            return True
 
-        new_content = content.replace(search_block, replace_block, 1)
-        file_path.write_text(new_content, encoding="utf-8")
-        return True
+        # 2. Stripped line match for single guidelines/lines
+        search_lines = [line_str.strip() for line_str in search_block.strip().splitlines() if line_str.strip()]
+        if len(search_lines) == 1:
+            target_phrase = search_lines[0].strip('", \t\'')
+            if len(target_phrase) >= 10:
+                for line in content.splitlines():
+                    if target_phrase in line:
+                        new_content = content.replace(line, replace_block.strip(), 1)
+                        file_path.write_text(new_content, encoding="utf-8")
+                        return True
+
+        # 3. Normalized whitespace regex replacement
+        pattern = re.escape(search_block.strip())
+        pattern = re.sub(r"\\\s+", r"\\s+", pattern)
+        match = re.search(pattern, content)
+        if match:
+            new_content = content[:match.start()] + replace_block + content[match.end():]
+            file_path.write_text(new_content, encoding="utf-8")
+            return True
+
+        logger.warning("Search block not found in %s", file_path)
+        return False
 
     def _revert_file(self, target_file_rel: str) -> None:
         """Revert local changes to target file using git."""
