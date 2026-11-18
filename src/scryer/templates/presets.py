@@ -24,16 +24,22 @@ class InvoiceLineItem(BaseModel):
 
 class InvoiceModel(BaseModel):
     """Standard financial invoice extraction model."""
-    vendor_name: str = Field(description="Name of the vendor or issuing business")
-    vendor_address: Optional[str] = Field(default=None, description="Vendor postal address")
+    vendor_name: str = Field(description="Name of the vendor, company, merchant, or issuing business")
+    vendor_address: Optional[str] = Field(
+        ...,
+        description="Physical store location or full postal address printed on the receipt (including street, lot/unit, city, state, and postcode). If not present, provide null.",
+    )
+    invoice_date: Optional[str] = Field(
+        ...,
+        description="Date printed on the receipt (DD/MM/YYYY, MM/DD/YYYY, or YYYY-MM-DD). If not present, provide null.",
+    )
+    total_amount: float = Field(description="Final total balance due or amount paid")
     customer_name: Optional[str] = Field(default=None, description="Customer or billed entity name")
     invoice_number: Optional[str] = Field(default=None, description="Invoice reference identifier")
-    invoice_date: Optional[str] = Field(default=None, description="Date the invoice was issued (YYYY-MM-DD)")
     due_date: Optional[str] = Field(default=None, description="Date payment is due")
     subtotal: Optional[float] = Field(default=None, description="Subtotal before taxes")
-    tax_amount: Optional[float] = Field(default=None, description="Tax or VAT amount")
-    total_amount: float = Field(description="Final total balance due")
-    currency: Optional[str] = Field(default="USD", description="Currency symbol or code (e.g. USD, EUR)")
+    tax_amount: Optional[float] = Field(default=None, description="Tax, GST, or VAT amount")
+    currency: Optional[str] = Field(default="USD", description="Currency symbol or code (e.g. USD, EUR, RM)")
     line_items: List[InvoiceLineItem] = Field(default_factory=list, description="Itemized billing rows")
 
 
@@ -52,11 +58,11 @@ INVOICE_TEMPLATE = ExtractionTemplate(
     description="Extract financial metadata, totals, vendor postal address, receipt date, and line items from invoices or receipts",
     schema_dict=InvoiceModel.model_json_schema(),
     prompt_guidelines=[
-        "Extract vendor_name, vendor_address, customer_name, and invoice_date exactly as printed",
-        "Ensure vendor_address includes the full printed address or street details",
-        "Ensure invoice_date captures the date visible on the document or receipt",
-        "Capture itemized rows with quantities and unit prices",
-        "Verify subtotal, tax_amount, and total_amount accurately",
+        "Extract vendor_name exactly as printed on the store header or invoice.",
+        "Crucial: Extract the full vendor/store postal address (street, unit/lot, city, postcode, state) into vendor_address whenever any address text is visible.",
+        "Ensure invoice_date captures the transaction date visible on the document or receipt.",
+        "Capture itemized rows with quantities, unit prices, and descriptions.",
+        "Verify subtotal, tax_amount, and total_amount accurately.",
     ],
     categories=["finance", "accounting", "invoicing", "receipts"],
 )

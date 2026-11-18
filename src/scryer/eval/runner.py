@@ -15,6 +15,7 @@ from scryer.eval.cache import BenchmarkCacheManager
 from scryer.eval.contracts import (
     DatasetType,
     EvaluationReport,
+    MetricScore,
     SampleEvaluationResult,
 )
 from scryer.eval.metrics import (
@@ -77,7 +78,19 @@ class BenchmarkRunner:
                 total_latency += latency_ms
 
                 # Compare structured_data or entities with ground truth
-                extracted_data: Dict[str, Any] = res.structured_data or {}
+                extracted_data: Dict[str, Any] = dict(res.structured_data or {})
+                extracted_data["filename"] = sample.sample_id
+                if res.metadata:
+                    if getattr(res.metadata, "sheet_names", None):
+                        extracted_data.setdefault("sheet_names", res.metadata.sheet_names)
+                    if getattr(res.metadata, "page_count", None):
+                        extracted_data.setdefault("page_count", res.metadata.page_count)
+                    if getattr(res.metadata, "custom_fields", None):
+                        for k, v in res.metadata.custom_fields.items():
+                            extracted_data.setdefault(k, v)
+                if getattr(res, "tables", None):
+                    extracted_data["table_count"] = len(res.tables)
+
                 # Also include metadata / text annotations
                 for an in res.unstructured_annotations:
                     extracted_data.setdefault("notes", []).append(an)
@@ -85,6 +98,14 @@ class BenchmarkRunner:
                 em, f1, breakdown = evaluate_extracted_entities(
                     extracted_data, sample.ground_truth_entities
                 )
+
+                field_scores_map: Dict[str, Any] = {}
+                for f_name, f_vals in breakdown.items():
+                    field_scores_map[f_name] = MetricScore(
+                        metric_name=f_name,
+                        score=f_vals.get("f1", 0.0),
+                        details=f_vals,
+                    )
 
                 cer = None
                 if sample.ground_truth_text:
@@ -100,6 +121,7 @@ class BenchmarkRunner:
                         char_error_rate=cer,
                         extracted_data=extracted_data,
                         ground_truth_data=sample.ground_truth_entities,
+                        field_scores=field_scores_map,
                     )
                 )
             except Exception as exc:

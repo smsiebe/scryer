@@ -88,12 +88,22 @@ class OfficeOCBAdapter(BaseDatasetAdapter):
                 elif filename.endswith(".csv"):
                     mime = "text/csv"
 
+                gt_entities = {"filename": filename}
+                if filename.endswith(".xlsx") and cached_file.exists():
+                    try:
+                        import openpyxl
+                        wb = openpyxl.load_workbook(cached_file, read_only=True)
+                        gt_entities["sheet_count"] = len(wb.sheetnames)
+                        wb.close()
+                    except Exception:
+                        pass
+
                 yield BenchmarkSample(
                     sample_id=filename,
                     dataset=self.dataset_type,
                     file_path=cached_file,
                     mime_type=mime,
-                    ground_truth_entities={"filename": filename},
+                    ground_truth_entities=gt_entities,
                     metadata={"original_reference": rfile},
                 )
                 count += 1
