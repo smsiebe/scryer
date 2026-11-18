@@ -32,3 +32,4 @@ class BaseDatasetAdapter(ABC):
     def iter_samples(self, limit: Optional[int] = None) -> Generator[BenchmarkSample, None, None]:
         """Iterate lazily through downloaded benchmark samples."""
         ...
+

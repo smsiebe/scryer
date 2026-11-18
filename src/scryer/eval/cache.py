@@ -50,3 +50,4 @@ class BenchmarkCacheManager:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
         return target
+

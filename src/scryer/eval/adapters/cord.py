@@ -31,6 +31,43 @@ class CORDAdapter(BaseDatasetAdapter):
         return samples
 
     def iter_samples(self, limit: Optional[int] = 10) -> Generator[BenchmarkSample, None, None]:
+        # 1. First check if we already have cached samples locally
+        dataset_dir = self.cache_mgr.get_dataset_dir(self.dataset_type.value)
+        cached_imgs = sorted(dataset_dir.glob("cord_test_*.png"))
+        if cached_imgs:
+            count = 0
+            for img_path in cached_imgs:
+                if limit and limit > 0 and count >= limit:
+                    break
+                s_id = img_path.stem
+                json_path = img_path.with_suffix(".json")
+                norm_entities: Dict[str, Any] = {}
+                if json_path.exists():
+                    try:
+                        gt_parsed = json.loads(json_path.read_text(encoding="utf-8"))
+                        gt_tree = gt_parsed.get("gt_parse", {})
+                        if "total" in gt_tree and isinstance(gt_tree["total"], dict):
+                            norm_entities["total"] = gt_tree["total"].get("total_price")
+                        if "sub_total" in gt_tree and isinstance(gt_tree["sub_total"], dict):
+                            norm_entities["subtotal"] = gt_tree["sub_total"].get("subtotal_price")
+                            norm_entities["tax"] = gt_tree["sub_total"].get("tax_price")
+                        if "menu" in gt_tree:
+                            norm_entities["items"] = gt_tree["menu"]
+                    except Exception:
+                        pass
+
+                yield BenchmarkSample(
+                    sample_id=s_id,
+                    dataset=self.dataset_type,
+                    file_path=img_path,
+                    mime_type="image/png",
+                    ground_truth_entities=norm_entities,
+                )
+                count += 1
+            if count > 0:
+                return
+
+        # 2. Otherwise download from Hugging Face datasets-server
         batch_size = 20
         offset = 0
         count = 0
@@ -115,3 +152,4 @@ class CORDAdapter(BaseDatasetAdapter):
                     count += 1
 
                 offset += len(rows)
+

@@ -91,3 +91,4 @@ class SROIEAdapter(BaseDatasetAdapter):
                     metadata={"source_url": f"{SROIE_REPO_RAW_BASE}/img/{s_id}.jpg"},
                 )
                 count += 1
+

@@ -49,14 +49,16 @@ class VisualSceneModel(BaseModel):
 # Pre-built ExtractionTemplate contract objects
 INVOICE_TEMPLATE = ExtractionTemplate(
     name="InvoiceExtraction",
-    description="Extract financial metadata, totals, and line items from invoices",
+    description="Extract financial metadata, totals, vendor postal address, receipt date, and line items from invoices or receipts",
     schema_dict=InvoiceModel.model_json_schema(),
     prompt_guidelines=[
-        "Extract vendor, customer, and date headers",
+        "Extract vendor_name, vendor_address, customer_name, and invoice_date exactly as printed",
+        "Ensure vendor_address includes the full printed address or street details",
+        "Ensure invoice_date captures the date visible on the document or receipt",
         "Capture itemized rows with quantities and unit prices",
-        "Verify subtotal, tax, and final amount due",
+        "Verify subtotal, tax_amount, and total_amount accurately",
     ],
-    categories=["finance", "accounting", "invoicing"],
+    categories=["finance", "accounting", "invoicing", "receipts"],
 )
 
 SCENE_TEMPLATE = ExtractionTemplate(

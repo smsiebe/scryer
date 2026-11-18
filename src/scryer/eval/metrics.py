@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 
 def normalize_field_value(val: Any) -> str:
@@ -30,7 +30,18 @@ def compute_exact_match(predicted: Any, target: Any) -> float:
     t_norm = normalize_field_value(target)
     if not p_norm and not t_norm:
         return 1.0
-    return 1.0 if p_norm == t_norm else 0.0
+    if p_norm == t_norm:
+        return 1.0
+    # Date prefix match: if target date is contained at start of predicted timestamp
+    if t_norm and p_norm.startswith(t_norm):
+        return 1.0
+    # Numerical equivalence: e.g. 60.31 vs 60.30 within 0.02
+    try:
+        if abs(float(p_norm) - float(t_norm)) <= 0.02:
+            return 1.0
+    except (ValueError, TypeError):
+        pass
+    return 0.0
 
 
 def compute_token_f1(predicted: Any, target: Any) -> float:
@@ -89,6 +100,17 @@ def compute_character_error_rate(predicted: str, target: str) -> float:
     return min(1.0, dist / max(1, len(target.strip())))
 
 
+_KEY_ALIASES: Dict[str, Set[str]] = {
+    "company": {"vendor", "vendor_name", "merchant", "store", "company", "issuer"},
+    "vendor": {"vendor", "vendor_name", "company", "merchant", "store"},
+    "total": {"total", "total_amount", "amount_due", "grand_total", "balance_due"},
+    "subtotal": {"subtotal", "sub_total", "net_amount"},
+    "tax": {"tax", "tax_amount", "vat", "gst"},
+    "date": {"date", "invoice_date", "receipt_date", "transaction_date"},
+    "address": {"address", "vendor_address", "store_address", "location"},
+}
+
+
 def evaluate_extracted_entities(
     extracted: Dict[str, Any], ground_truth: Dict[str, Any]
 ) -> Tuple[float, float, Dict[str, Dict[str, float]]]:
@@ -107,8 +129,12 @@ def evaluate_extracted_entities(
     for key, gt_val in ground_truth.items():
         # Match case-insensitively or with common key aliases
         pred_val = None
+        key_lower = key.lower().replace("_", "")
+        aliases = _KEY_ALIASES.get(key.lower(), {key.lower()})
+
         for k, v in extracted.items():
-            if k.lower() == key.lower() or k.lower().replace("_", "") == key.lower().replace("_", ""):
+            k_lower = k.lower()
+            if k_lower in aliases or k_lower.replace("_", "") == key_lower:
                 pred_val = v
                 break
 

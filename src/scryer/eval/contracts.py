@@ -76,3 +76,4 @@ class EvaluationReport(BaseModel):
     mean_char_error_rate: Optional[float] = None
     per_field_accuracy: Dict[str, float] = Field(default_factory=dict)
     samples: List[SampleEvaluationResult] = Field(default_factory=list)
+
