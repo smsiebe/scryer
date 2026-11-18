@@ -50,6 +50,8 @@ Guidelines for proposals:
 1. Target files should typically be 'src/scryer/templates/presets.py' (improving prompt_guidelines or schemas) or 'src/scryer/eval/metrics.py' (refining key aliases or normalization).
 2. The search_block must be an exact verbatim substring in the current target file.
 3. Keep changes minimal and surgical to avoid breaking existing valid extractions.
+4. SYNTAX RULE: If replacing an item inside `prompt_guidelines = [...]`, ensure the replacement is a valid Python string literal with double quotes, e.g.:
+   "Extract vendor_name, merchant name, or store company exactly as printed on the header.",
 """
 
 
@@ -132,16 +134,18 @@ class LocalPhiLoopOrchestrator:
             file_path.write_text(new_content, encoding="utf-8")
             return True
 
-        # 2. Stripped line match for single guidelines/lines
-        search_lines = [line_str.strip() for line_str in search_block.strip().splitlines() if line_str.strip()]
-        if len(search_lines) == 1:
-            target_phrase = search_lines[0].strip('", \t\'')
-            if len(target_phrase) >= 10:
-                for line in content.splitlines():
-                    if target_phrase in line:
-                        new_content = content.replace(line, replace_block.strip(), 1)
-                        file_path.write_text(new_content, encoding="utf-8")
-                        return True
+        # 2. Resilient guideline/phrase matching
+        target_phrase = search_block.strip('", \t\'\n')
+        if len(target_phrase) >= 8:
+            for line in content.splitlines():
+                line_clean = line.strip('", \t\'')
+                if target_phrase in line_clean or line_clean in target_phrase:
+                    if not replace_block.strip().startswith(('"', "'")):
+                        clean_text = replace_block.strip().rstrip(",").strip('"').strip("'")
+                        replace_block = f'        "{clean_text}",'
+                    new_content = content.replace(line, replace_block.strip(), 1)
+                    file_path.write_text(new_content, encoding="utf-8")
+                    return True
 
         # 3. Normalized whitespace regex replacement
         pattern = re.escape(search_block.strip())
