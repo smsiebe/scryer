@@ -65,6 +65,7 @@ INVOICE_TEMPLATE = ExtractionTemplate(
         "Crucial: Extract the full vendor/store postal address (street, unit/lot, city, postcode, state) into vendor_address whenever any address text is visible.",
         "Ensure invoice_date captures the transaction date visible on the document or receipt.",
         "Capture itemized rows with quantities, unit prices, and descriptions.",
+        "When visible, extract discount_amount, cash_tendered, and change_amount to allow mathematical verification of net balance.",
         "Ensure total_amount captures the final payable grand total or net cash after all discounts and rounding adjustments. Do not confuse total with subtotal or change returned.",
     ],
     categories=["finance", "accounting", "invoicing", "receipts"],

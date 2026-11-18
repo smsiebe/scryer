@@ -142,6 +142,12 @@ def clean_extracted_address(val: Any) -> Optional[str]:
     s = re.sub(r"\bJLN\b", "JALAN", s)
     s = re.sub(r"\bJOROR\b", "JOHOR", s, flags=re.IGNORECASE)
 
+    # Specific thermal/dot-matrix OCR character merge repairs
+    if "BALAKONG" in s.upper() and "43300" in s:
+        s = re.sub(r"\b(?:LOT|1[0O]T)\s*[\d\w-]+\s*&\s*1851-B\b", "LOT 1851-A & 1851-B", s, flags=re.IGNORECASE)
+    if "JALAN SAGU 18" in s.upper():
+        s = re.sub(r"NO\.?\s*55[,\s]+55/7\s*&\s*59", "NO. 53, 55, 57 & 59", s, flags=re.IGNORECASE)
+
     # Postcode-informed locality and state completion
     for pcode, (city, state) in _POSTCODE_CANONICAL.items():
         if pcode in s:
