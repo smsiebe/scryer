@@ -39,6 +39,9 @@ class InvoiceModel(BaseModel):
     due_date: Optional[str] = Field(default=None, description="Date payment is due")
     subtotal: Optional[float] = Field(default=None, description="Subtotal before taxes")
     tax_amount: Optional[float] = Field(default=None, description="Tax, GST, or VAT amount")
+    discount_amount: Optional[float] = Field(default=None, description="Total discount or markdown amount")
+    cash_tendered: Optional[float] = Field(default=None, description="Cash tendered or paid by customer")
+    change_amount: Optional[float] = Field(default=None, description="Change amount returned to customer")
     currency: Optional[str] = Field(default="USD", description="Currency symbol or code (e.g. USD, EUR, RM)")
     line_items: List[InvoiceLineItem] = Field(default_factory=list, description="Itemized billing rows")
 
@@ -62,7 +65,7 @@ INVOICE_TEMPLATE = ExtractionTemplate(
         "Crucial: Extract the full vendor/store postal address (street, unit/lot, city, postcode, state) into vendor_address whenever any address text is visible.",
         "Ensure invoice_date captures the transaction date visible on the document or receipt.",
         "Capture itemized rows with quantities, unit prices, and descriptions.",
-        "Verify subtotal, tax_amount, and total_amount accurately.",
+        "Ensure total_amount captures the final payable grand total or net cash after all discounts and rounding adjustments. Do not confuse total with subtotal or change returned.",
     ],
     categories=["finance", "accounting", "invoicing", "receipts"],
 )

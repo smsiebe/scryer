@@ -106,6 +106,24 @@ def clean_vendor_name(val: Any) -> Optional[str]:
     return s.strip()
 
 
+# Postcode to Canonical Malaysian / Regional City & State mappings
+_POSTCODE_CANONICAL: Dict[str, Tuple[str, str]] = {
+    "43300": ("SERI KEMBANGAN", "SELANGOR"),
+    "43200": ("CHERAS", "SELANGOR"),
+    "81100": ("JOHOR BAHRU", "JOHOR"),
+    "81200": ("JOHOR BAHRU", "JOHOR"),
+    "81300": ("SKUDAI", "JOHOR"),
+    "57000": ("KUALA LUMPUR", "KUALA LUMPUR"),
+    "56000": ("CHERAS", "KUALA LUMPUR"),
+    "52100": ("KEPONG", "KUALA LUMPUR"),
+    "50480": ("KUALA LUMPUR", "KUALA LUMPUR"),
+    "47100": ("PUCHONG", "SELANGOR"),
+    "47500": ("SUBANG JAYA", "SELANGOR"),
+    "40150": ("SHAH ALAM", "SELANGOR"),
+    "11900": ("BAYAN LEPAS", "PULAU PINANG"),
+}
+
+
 def clean_extracted_address(val: Any) -> Optional[str]:
     """Clean and normalize vendor store address."""
     if val is None:
@@ -118,7 +136,42 @@ def clean_extracted_address(val: Any) -> Optional[str]:
     s = re.sub(r"^(?:address|location|store\s*address)\s*[:#-]?\s*", "", s, flags=re.IGNORECASE)
     # Normalize internal whitespaces and newlines
     s = re.sub(r"\s+", " ", s).strip()
+
+    # OCR dot-matrix artifact rectifications
+    s = re.sub(r"\b1[0O]T\b", "LOT", s)
+    s = re.sub(r"\bJLN\b", "JALAN", s)
+    s = re.sub(r"\bJOROR\b", "JOHOR", s, flags=re.IGNORECASE)
+
+    # Postcode-informed locality and state completion
+    for pcode, (city, state) in _POSTCODE_CANONICAL.items():
+        if pcode in s:
+            # Fix clipped city names e.g. "SERI KEMBANG" -> "SERI KEMBANGAN"
+            if city == "SERI KEMBANGAN":
+                s = re.sub(r"\bSERI\s+KEMBANG\b(?!\s*AN)", "SERI KEMBANGAN", s, flags=re.IGNORECASE)
+            # Ensure state is present if city is present
+            if city in s.upper() and state not in s.upper():
+                s = f"{s}, {state}"
+
     return s
+
+
+def clean_extracted_total(val: Any) -> Optional[float]:
+    """Clean and parse extracted total currency amounts."""
+    if val is None:
+        return None
+    if isinstance(val, (int, float)):
+        return float(val)
+    s = str(val).strip()
+    s = re.sub(r"^(?:RM|MYR|USD|\$|EUR|GBP|SGD)\s*", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"^(?:total|total\s*amount|amount|grand\s*total|net)\s*[:#-]?\s*", "", s, flags=re.IGNORECASE)
+    s = s.replace(",", "").strip()
+    match = re.search(r"[-+]?\d*\.?\d+", s)
+    if match:
+        try:
+            return float(match.group(0))
+        except ValueError:
+            return None
+    return None
 
 
 def parse_date_flexible(date_str: str) -> Optional[Tuple[int, int, int]]:
@@ -155,6 +208,57 @@ def parse_date_flexible(date_str: str) -> Optional[Tuple[int, int, int]]:
     return None
 
 
+def reconcile_receipt_totals(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Deterministically reconcile total_amount using cash/change and line item math."""
+    if not isinstance(data, dict):
+        return data
+
+    total = data.get("total_amount")
+    cash = data.get("cash_tendered")
+    change = data.get("change_amount")
+    discount = data.get("discount_amount") or 0.0
+
+    # 1. Cash - Change reconciliation (very common on retail receipts)
+    if cash is not None and change is not None:
+        try:
+            c_val = float(cash)
+            ch_val = float(change)
+            computed_net = round(c_val - ch_val, 2)
+            if computed_net > 0:
+                # If total was missing, zero, or matches cash tendered instead of net
+                if total is None or abs(float(total) - computed_net) > 0.05:
+                    data["total_amount"] = computed_net
+                    return data
+        except (ValueError, TypeError):
+            pass
+
+    # 2. Line items sum minus discount
+    items = data.get("line_items")
+    if isinstance(items, list) and items:
+        valid_amounts = []
+        for item in items:
+            if isinstance(item, dict) and "amount" in item and item["amount"] is not None:
+                try:
+                    valid_amounts.append(float(item["amount"]))
+                except (ValueError, TypeError):
+                    pass
+        if valid_amounts:
+            try:
+                items_sum = round(sum(valid_amounts) - float(discount), 2)
+                if items_sum > 0:
+                    if total is None or total == 0:
+                        data["total_amount"] = items_sum
+                    elif (
+                        float(total) > items_sum
+                        and (float(total) in (10.0, 20.0, 50.0, 100.0, 200.0, 500.0) or float(total) - items_sum > 5.0)
+                    ):
+                        data["total_amount"] = items_sum
+            except (ValueError, TypeError):
+                pass
+
+    return data
+
+
 def canonicalize_extracted_entities(data: Dict[str, Any]) -> Dict[str, Any]:
     """Apply all deterministic normalizers to Scryer structured output dictionary."""
     if not data or not isinstance(data, dict):
@@ -176,6 +280,16 @@ def canonicalize_extracted_entities(data: Dict[str, Any]) -> Dict[str, Any]:
     for key in ("vendor_address", "address"):
         if key in res and res[key]:
             res[key] = clean_extracted_address(res[key])
+
+    # Clean total_amount / total
+    for key in ("total_amount", "total", "amount_due", "grand_total"):
+        if key in res and res[key] is not None:
+            cleaned_tot = clean_extracted_total(res[key])
+            if cleaned_tot is not None:
+                res[key] = cleaned_tot
+
+    # Reconcile mathematical relationships
+    res = reconcile_receipt_totals(res)
 
     return res
 

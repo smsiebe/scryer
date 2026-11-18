@@ -6,8 +6,10 @@ from scryer.normalizers import (
     canonicalize_extracted_entities,
     clean_extracted_address,
     clean_extracted_date,
+    clean_extracted_total,
     clean_vendor_name,
     parse_date_flexible,
+    reconcile_receipt_totals,
 )
 
 
@@ -53,4 +55,33 @@ def test_canonicalize_extracted_entities():
     assert cleaned["invoice_date"] == "25/12/2018"
     assert cleaned["vendor_address"] == "NO. 55 JALAN SAGU"
     assert cleaned["total_amount"] == 9.0
+
+
+def test_clean_extracted_total():
+    assert clean_extracted_total("RM 60.30") == 60.30
+    assert clean_extracted_total("$1,234.50") == 1234.50
+    assert clean_extracted_total("Total: 80.91") == 80.91
+    assert clean_extracted_total(None) is None
+
+
+def test_reconcile_receipt_totals():
+    # 1. Cash minus change reconciliation
+    data1 = {
+        "total_amount": 70.30,  # Hallucinated or confused with change
+        "cash_tendered": 70.00,
+        "change_amount": 9.70,
+    }
+    res1 = reconcile_receipt_totals(data1)
+    assert res1["total_amount"] == 60.30
+
+    # 2. Line items sum vs cash tendered bill (e.g. 100.0)
+    data2 = {
+        "total_amount": 100.0,
+        "line_items": [
+            {"description": "Item 1", "amount": 80.91}
+        ],
+    }
+    res2 = reconcile_receipt_totals(data2)
+    assert res2["total_amount"] == 80.91
+
 
