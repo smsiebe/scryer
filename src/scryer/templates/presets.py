@@ -66,7 +66,7 @@ INVOICE_TEMPLATE = ExtractionTemplate(
         "Ensure invoice_date captures the transaction date visible on the document or receipt.",
         "Capture itemized rows with quantities, unit prices, and descriptions.",
         "When visible, extract discount_amount, cash_tendered, and change_amount to allow mathematical verification of net balance.",
-        "Ensure total_amount captures the final payable grand total or net cash after all discounts and rounding adjustments. Do not confuse total with subtotal or change returned.",
+        "Ensure total_amount captures the final payable grand total or total rounded amount after discounts. Do NOT extract Cash Tendered (e.g. 100.00 bill) or Change returned as total_amount.",
     ],
     categories=["finance", "accounting", "invoicing", "receipts"],
 )

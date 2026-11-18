@@ -253,11 +253,20 @@ def reconcile_receipt_totals(data: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(items, list) and items:
         valid_amounts = []
         for item in items:
-            if isinstance(item, dict) and "amount" in item and item["amount"] is not None:
-                try:
-                    valid_amounts.append(float(item["amount"]))
-                except (ValueError, TypeError):
-                    pass
+            if isinstance(item, dict):
+                amt = None
+                if "amount" in item and item["amount"] is not None:
+                    try:
+                        amt = float(item["amount"])
+                    except (ValueError, TypeError):
+                        pass
+                elif "unit_price" in item and item["unit_price"] is not None:
+                    try:
+                        amt = float(item["unit_price"])
+                    except (ValueError, TypeError):
+                        pass
+                if amt is not None:
+                    valid_amounts.append(amt)
         if valid_amounts:
             try:
                 items_sum = round(sum(valid_amounts) - float(discount), 2)
