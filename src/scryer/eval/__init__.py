@@ -17,6 +17,7 @@ from scryer.eval.metrics import (
     compute_token_f1,
     evaluate_extracted_entities,
 )
+from scryer.eval.local_loop import LocalPhiLoopOrchestrator
 from scryer.eval.runner import BenchmarkRunner
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "BenchmarkSample",
     "DatasetType",
     "EvaluationReport",
+    "LocalPhiLoopOrchestrator",
     "MetricScore",
     "SampleEvaluationResult",
     "compute_character_error_rate",

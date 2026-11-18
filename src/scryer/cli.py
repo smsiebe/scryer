@@ -192,6 +192,29 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_eval_loop(args: argparse.Namespace) -> int:
+    from scryer.eval.local_loop import LocalPhiLoopOrchestrator
+
+    orchestrator = LocalPhiLoopOrchestrator(
+        ollama_url=args.ollama_url,
+        model_name=args.model,
+        cache_dir=args.cache_dir,
+        significance_threshold=args.threshold,
+    )
+    report_md = orchestrator.run_loop(
+        dataset=args.dataset,
+        max_iterations=args.max_iter,
+        patience=args.patience,
+        limit=args.limit,
+    )
+    if args.out:
+        Path(args.out).write_text(report_md, encoding="utf-8")
+        print(f"Loop report written to {args.out}")
+    else:
+        print(report_md)
+    return 0
+
+
 def _add_extraction_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--template", choices=["invoice", "scene", "summary"], help="Named preset template")
     p.add_argument("--template-file", help="Path to custom YAML or JSON template file")
@@ -241,6 +264,17 @@ def main(argv: list[str] | None = None) -> int:
     eval_parser.add_argument("--cache-dir", help="Directory for dataset cache")
     eval_parser.add_argument("--out", "-o", help="Write evaluation JSON report to path")
 
+    loop_parser = subparsers.add_parser("eval-loop", help="Autonomous iterative on-prem optimization loop using local Phi")
+    loop_parser.add_argument("--dataset", "-d", choices=["sroie", "cord", "office_ocb"], default="sroie", help="Target benchmark dataset")
+    loop_parser.add_argument("--limit", "-n", type=int, default=5, help="Sample count per evaluation (default: 5)")
+    loop_parser.add_argument("--max-iter", type=int, default=100, help="Maximum iterations (default: 100)")
+    loop_parser.add_argument("--patience", type=int, default=5, help="Iterations without significant delta before stopping (default: 5)")
+    loop_parser.add_argument("--threshold", type=float, default=0.005, help="Statistical significance threshold (default: 0.005)")
+    loop_parser.add_argument("--model", default="auracore-assist-phi:latest", help="Local Ollama model name (default: auracore-assist-phi:latest)")
+    loop_parser.add_argument("--ollama-url", default="http://127.0.0.1:11434", help="Local Ollama server URL")
+    loop_parser.add_argument("--cache-dir", help="Directory for dataset cache")
+    loop_parser.add_argument("--out", "-o", help="Write final Markdown report to path")
+
     args = parser.parse_args(argv)
     if not args.command:
         parser.print_help()
@@ -255,6 +289,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_doctor(args)
     if args.command == "eval":
         return _cmd_eval(args)
+    if args.command == "eval-loop":
+        return _cmd_eval_loop(args)
     return 0
 
 
