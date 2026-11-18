@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scryer"
-version = "0.2.0"
+version = "0.3.0"
 description = "Two-phase lossless document and image context extraction library powered by AuraRouter"
 readme = "README.md"
 requires-python = ">=3.12"

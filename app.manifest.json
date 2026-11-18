@@ -2,7 +2,7 @@
   "$schema": "https://auragrid.io/schemas/app.manifest.schema.json",
   "appId": "scryer",
   "name": "Scryer - Two-Phase Lossless Context Extractor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Standalone lossless document and multimodal extraction worker cell powered by AuraRouter.",
   "services": [
     {
