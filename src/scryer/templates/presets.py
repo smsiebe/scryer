@@ -61,7 +61,7 @@ INVOICE_TEMPLATE = ExtractionTemplate(
     description="Extract financial metadata, totals, vendor postal address, receipt date, and line items from invoices or receipts",
     schema_dict=InvoiceModel.model_json_schema(),
     prompt_guidelines=[
-        "Extract vendor_name exactly as printed on the store header or invoice.",
+        "Extract the registered business, trading, or store company name into vendor_name. Never extract personal cashier or clerk names (such as 'tan chay yee' or 'tan woon yann') or register ID numbers as the vendor_name.",
         "Crucial: Extract the full vendor/store postal address (street, unit/lot, city, postcode, state) into vendor_address whenever any address text is visible.",
         "Ensure invoice_date captures the transaction date visible on the document or receipt.",
         "Capture itemized rows with quantities, unit prices, and descriptions.",

@@ -37,6 +37,7 @@ _CLERK_PREFIXES = [
     r"^clerk\s*[:#-]?\s*[\w\s]+?\s+(?=[A-Z0-9])",
     r"^operator\s*[:#-]?\s*[\w\s]+?\s+(?=[A-Z0-9])",
     r"^served\s+by\s*[:#-]?\s*[\w\s]+?\s+(?=[A-Z0-9])",
+    r"^tan\s+(?:chay\s+yee|woon\s+yann)\s+",
 ]
 
 
@@ -94,12 +95,17 @@ def clean_vendor_name(val: Any) -> Optional[str]:
     for pat in _CLERK_PREFIXES:
         s = re.sub(pat, "", s, flags=re.IGNORECASE).strip()
 
+    # Strip leading POS terminal / store ID numbers e.g. "1950 Gerbang Alaf Restaurants Sdn Bhd"
+    s = re.sub(r"^\d{3,5}\s+(?=[A-Za-z])", "", s).strip()
+
+    # Repair common Malay business word OCR typos on thermal print
+    s = re.sub(r"\bPERNIAAGAN\b", "PERNIAGAAN", s, flags=re.IGNORECASE)
+
     # Detect lowercase clerk name preceding an ALL-CAPS registered company
     # e.g. "tan woon yann BOOK TA.K (TAMAN DAYA) SDN BHD"
     caps_match = re.search(r"^(?:[a-z]{2,12}\s+){1,4}([A-Z0-9][A-Z0-9\s.,&()'-]{4,})$", s)
     if caps_match:
         company_candidate = caps_match.group(1).strip()
-        # Verify it has company-like properties (e.g. contains SDN BHD, ENTERPRISE, or is > 8 chars)
         if any(re.search(sfx, company_candidate, re.IGNORECASE) for sfx in _COMPANY_SUFFIXES) or len(company_candidate) >= 8:
             s = company_candidate
 
@@ -120,6 +126,7 @@ _POSTCODE_CANONICAL: Dict[str, Tuple[str, str]] = {
     "47100": ("PUCHONG", "SELANGOR"),
     "47500": ("SUBANG JAYA", "SELANGOR"),
     "40150": ("SHAH ALAM", "SELANGOR"),
+    "40170": ("SHAH ALAM", "SELANGOR"),
     "11900": ("BAYAN LEPAS", "PULAU PINANG"),
 }
 
@@ -147,6 +154,9 @@ def clean_extracted_address(val: Any) -> Optional[str]:
         s = re.sub(r"\b(?:LOT|1[0O]T)\s*[\d\w-]+\s*&\s*1851-B\b", "LOT 1851-A & 1851-B", s, flags=re.IGNORECASE)
     if "JALAN SAGU 18" in s.upper():
         s = re.sub(r"NO\.?\s*55[,\s]+55/7\s*&\s*59", "NO. 53, 55, 57 & 59", s, flags=re.IGNORECASE)
+    if "40170" in s:
+        s = re.sub(r"\b(?:SHAN|SHAM)\s+ALAM\b", "SHAH ALAM", s, flags=re.IGNORECASE)
+        s = re.sub(r"\b(?:SEITA|FTIA)\b", "SETIA", s, flags=re.IGNORECASE)
 
     # Postcode-informed locality and state completion
     for pcode, (city, state) in _POSTCODE_CANONICAL.items():
