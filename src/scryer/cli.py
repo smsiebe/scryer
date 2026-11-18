@@ -270,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
     loop_parser.add_argument("--max-iter", type=int, default=100, help="Maximum iterations (default: 100)")
     loop_parser.add_argument("--patience", type=int, default=5, help="Iterations without significant delta before stopping (default: 5)")
     loop_parser.add_argument("--threshold", type=float, default=0.005, help="Statistical significance threshold (default: 0.005)")
-    loop_parser.add_argument("--model", default="auracore-assist-phi:latest", help="Local Ollama model name (default: auracore-assist-phi:latest)")
+    loop_parser.add_argument("--model", default="qwen2.5-coder:7b", help="Local Ollama model name (default: qwen2.5-coder:7b)")
     loop_parser.add_argument("--ollama-url", default="http://127.0.0.1:11434", help="Local Ollama server URL")
     loop_parser.add_argument("--cache-dir", help="Directory for dataset cache")
     loop_parser.add_argument("--out", "-o", help="Write final Markdown report to path")
